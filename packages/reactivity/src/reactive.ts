@@ -1,5 +1,5 @@
 import { isObject } from "@vue/shared";
-
+import {mutableHandlers} from "./baseHandler"
 // 缓存所有被代理的对象
 // 防止用户多次代理同一个对象
 /**
@@ -11,6 +11,7 @@ import { isObject } from "@vue/shared";
 // WeakMap  key只能是对象
 const reactiveMap = new WeakMap() 
 
+
 //判断这个对象有没有被代理过
 //防止用户传入一个代理过的对象
 /**
@@ -20,9 +21,11 @@ const reactiveMap = new WeakMap()
  * 
 */
 //TS 独有  枚举
-const enum ReactiveFlags {
-  IS_REACTIVE = '__v_isReactive'
-}
+// export   const enum ReactiveFlags {
+//   IS_REACTIVE = '__v_isReactive'
+// }
+import {ReactiveFlags} from "./baseHandler"
+
 
 // 1)  将数据转化为响应式数据
 export function reactive(target){
@@ -37,17 +40,7 @@ export function reactive(target){
     return target
   }
   //对传入的值进行代理
-  const proxy = new Proxy(target,{
-    get(target,key,receiver){
-      if(key === ReactiveFlags.IS_REACTIVE){
-        return true
-      }
-      return Reflect.get(target,key,receiver)
-    },
-    set(target,key,value,receiver){
-      return Reflect.set(target,key,value,receiver)
-    }
-  })
+  const proxy = new Proxy(target,mutableHandlers)
 
   reactiveMap.set(target,proxy)
 

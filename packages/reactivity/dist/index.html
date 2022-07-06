@@ -29,16 +29,34 @@
     
     // 此effect函数默认先执行一次 
     // 对响应式数据取值(取值的过程中数据会依赖于当前的effect)
-    effect(()=>{
+    
+    let runner = effect(()=>{
       app.innerHTML = state.name + "今年" + state.age + "岁" + state.address.city 
     })
 
+    // runner.effect.stop() //停止更新
+
     // name和age发生变化会重新执行effect函数
     setTimeout(()=>{
-      // state.age = 23
+      state.age = 23
       state.address.city = "zhongg"
       console.log(state)
+      // runner()  //手动更新
     },1000)
+    
+   
+   /*  let runner = effect(()=>{
+      app.innerHTML = state.name + "今年" + state.age + "岁" + state.address.city 
+    },{
+      scheduler(){  //调度器
+        setTimeout(()=>{
+          runner()
+        },2000)
+      }
+    })
+    state.name = "xm" */
+
+
   </script>
   
 </body>
