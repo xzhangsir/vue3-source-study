@@ -17,7 +17,8 @@
     // readonly只读的
     // shallowReadonly  浅层只读的 深层的可以改 但是不触发响应式
     // const {effect,reactive,shallowReactive,readonly,shallowReadonly} = VueReactivity
-    const {effect,reactive} = VUeReactivity
+ /*  
+   const {effect,reactive} = VueReactivity
 
     const  state = reactive({
       name:"zx",
@@ -25,12 +26,12 @@
       address:{
         city:"中国"
       }
-    })
+    }) */
     
     // 此effect函数默认先执行一次 
     // 对响应式数据取值(取值的过程中数据会依赖于当前的effect)
     
-    let runner = effect(()=>{
+  /*   let runner = effect(()=>{
       app.innerHTML = state.name + "今年" + state.age + "岁" + state.address.city 
     })
 
@@ -43,7 +44,7 @@
       console.log(state)
       // runner()  //手动更新
     },1000)
-    
+     */
    
    /*  let runner = effect(()=>{
       app.innerHTML = state.name + "今年" + state.age + "岁" + state.address.city 
@@ -55,6 +56,31 @@
       }
     })
     state.name = "xm" */
+
+    const {computed,effect,reactive} = VueReactivity
+
+    const state = reactive({
+      firName:"zhang",
+      lastName:"xin"
+    })
+    const fullName = computed({
+      get(){ //defineProperty 中的 getter
+        return state.firName + state.lastName
+      },
+      set(newVal){ //defineProperty 中的 setter
+        console.log(newVal)
+
+      }
+    })
+    effect(()=>{
+      app.innerHTML = fullName.value
+    })
+    console.log(fullName.value)
+    // fullName.value = 100
+    // console.log(fullName)
+    setTimeout(()=>{
+      state.firName = "xue"
+    },1000)
 
 
   </script>

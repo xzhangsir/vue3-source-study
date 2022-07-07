@@ -9,7 +9,7 @@ function cleanupEffect(effect){
 }
 
 
-class ReactiveEffect{
+export class ReactiveEffect{
   //这个TS中写class的方式
   // 用于标记当前effect的父级是谁
   public parent = null
@@ -154,7 +154,7 @@ export function trigger(target,type,key,value,oldVal){
   let effects = depsMap.get(key) // 找到属性对应的effect
   
   if(effects){
-    effects = new Set(effects) // 先copy一份
+   /*  effects = new Set(effects) // 先copy一份
     effects.forEach(effect=>{
       // 如果在执行effect的时候 effect里面又有数据更新
       // 那么我们就不能执行effect 防止死循环
@@ -168,10 +168,30 @@ export function trigger(target,type,key,value,oldVal){
         }
         
       }
-    })
-  }
- 
+    }) */
+    triggerEffects(effects)
+  } 
 }
+
+export function triggerEffects(effects){
+  effects = new Set(effects) // 先copy一份
+  effects.forEach(effect=>{
+    // 如果在执行effect的时候 effect里面又有数据更新
+    // 那么我们就不能执行effect 防止死循环
+    if(effect !== activeEffect){
+      if(effect.scheduler){
+        //如果用户传入了 调度函数 则用用户传入的
+        effect.scheduler() 
+      }else{
+        // 否则默认刷新视图
+        effect.run()
+      }
+      
+    }
+  })
+}
+
+
 
 
 
