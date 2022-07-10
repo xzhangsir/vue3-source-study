@@ -7,6 +7,8 @@
   <title>Document</title>
   <script src = "./reactivity.global.js"></script>
   <!-- <script src = "../../../node_modules/@vue/reactivity/dist/reactivity.global.js"></script> -->
+  <!-- <script src = "../../../node_modules/vue/dist/vue.global.js"></script> -->
+
 </head>
 <body>
   <div id="app"></div>
@@ -57,7 +59,7 @@
     })
     state.name = "xm" */
 
-    const {computed,effect,reactive} = VueReactivity
+ /*    const {computed,effect,reactive} = VueReactivity
 
     const state = reactive({
       firName:"zhang",
@@ -81,8 +83,66 @@
     setTimeout(()=>{
       state.firName = "xue"
     },1000)
+ */
+
+//  const {watch,reactive} = Vue 
+  const {watch,reactive} = VueReactivity
+
+ const state = reactive({
+  name:"zx",
+  age:18,
+  address:{
+    city:"xa"
+  }
+ })
+ //这样的写法 就是单纯的监控数据变化 数据变了就会重新执行
+// 监控对象无法区分前后的新值和老值
+// 打印的newVal和oldVal是一样
+// 因为是同一个引用地址
+ watch(state,function(newVal,oldVal){
+  console.log(newVal,oldVal)
+ })
+
+//  写法二
+// watch(()=>state.address.city,function(newVal,oldVal){
+//   console.log("2",newVal,oldVal)
+// })
 
 
+// watch 的本质就是effect 
+// 内部对用户填写的 数据进行依赖收集
+
+ setTimeout(()=>{
+  state.name = "xm"
+  // state.address.city = "bj"
+ },1000)
+
+
+
+ let i = 2000
+
+ function getData(timer){
+  return new Promise((resolve,reject)=>{
+    setTimeout(()=>{
+      resolve(timer)
+    },timer)
+  })
+ }
+
+ watch(()=>state.age,async (newval,oldVal,onCleanup)=>{
+  let clear = false
+  onCleanup(()=>{
+    clear = true
+  })
+  i -= 1000
+  let r = await getData(i)
+  if(!clear) {
+    // 第一次执行1S后渲染1000
+    // 第二次执行0S后渲染0
+    // 最终应该是0
+    documnet.body.innerHTML = r;
+  }
+ },{flush:"sync"})
   </script>
   
 </body>

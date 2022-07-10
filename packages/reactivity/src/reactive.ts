@@ -26,6 +26,10 @@ const reactiveMap = new WeakMap()
 // }
 import {ReactiveFlags} from "./baseHandler"
 
+export function isReactive(val){
+  return !!(val && val[ReactiveFlags.IS_REACTIVE])
+}
+
 
 // 1)  将数据转化为响应式数据
 export function reactive(target){
