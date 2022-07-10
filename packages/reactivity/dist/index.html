@@ -140,9 +140,11 @@
     // 第一次执行1S后渲染1000
     // 第二次执行0S后渲染0
     // 最终应该是0
-    documnet.body.innerHTML = r;
+    document.body.innerHTML = r;
   }
  },{flush:"sync"})
+ state.age = 23
+ state.age = 24
   </script>
   
 </body>
