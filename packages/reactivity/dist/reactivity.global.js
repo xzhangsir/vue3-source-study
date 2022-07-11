@@ -22,7 +22,10 @@ var VueReactivity = (() => {
   __export(src_exports, {
     computed: () => computed,
     effect: () => effect,
+    proxyRefs: () => proxyRefs,
     reactive: () => reactive,
+    ref: () => ref,
+    toRefs: () => toRefs,
     watch: () => watch
   });
 
@@ -239,6 +242,72 @@ var VueReactivity = (() => {
     };
     const effect2 = new ReactiveEffect(getter, job);
     oldVal = effect2.run();
+  }
+
+  // packages/reactivity/src/ref.ts
+  function toReactive(val) {
+    return isObject(val) ? reactive(val) : val;
+  }
+  var RefImpl = class {
+    constructor(rawVal) {
+      this.rawVal = rawVal;
+      this.dep = /* @__PURE__ */ new Set();
+      this.__v_isRef = true;
+      this._value = toReactive(rawVal);
+    }
+    get value() {
+      this.dep.add(activeEffect);
+      return this._value;
+    }
+    set value(newVal) {
+      if (newVal !== this.rawVal) {
+        this._value = toReactive(newVal);
+        this.rawVal = newVal;
+        triggerEffects(this.dep);
+      }
+    }
+  };
+  function ref(val) {
+    return new RefImpl(val);
+  }
+  var ObjectRefImpl = class {
+    constructor(object, key) {
+      this.object = object;
+      this.key = key;
+    }
+    get value() {
+      return this.object[this.key];
+    }
+    set value(newVal) {
+      this.object[this.key] = newVal;
+    }
+  };
+  function toRef(object, key) {
+    return new ObjectRefImpl(object, key);
+  }
+  function toRefs(object) {
+    const result = isArray(object) ? new Array(object.length) : {};
+    for (let key in object) {
+      result[key] = toRef(object, key);
+    }
+    return result;
+  }
+  function proxyRefs(object) {
+    return new Proxy(object, {
+      get(target, key, recevier) {
+        let r = Reflect.get(target, key, recevier);
+        return r.__v_isRef ? r.value : r;
+      },
+      set(target, key, value, recevier) {
+        let oldVal = Reflect.get(target, key, recevier);
+        if (oldVal.__v_isRef) {
+          oldVal.value = value;
+          return true;
+        } else {
+          return Reflect.set(target, key, value, recevier);
+        }
+      }
+    });
   }
   return __toCommonJS(src_exports);
 })();
