@@ -12,27 +12,29 @@
   <div id="app"></div>
   <script>
 
-    let {createRenderer,h} = VueRuntimeDOM
+    let {createRenderer,h,render} = VueRuntimeDOM
 
     // 渲染器渲染的是虚拟dom
-    let renderer = createRenderer({
-      createElement(el){
-        return document.createElement(el)
-      },
-      setElementText(el,text){
-        el.innerHTML = text
-      },
-      insert(el,container){
-        container.appendChild(el)
-      },
-      patchProp(el,key,prevValue,nextValue){
-        console.log(el,key,nextValue)
-      }
+    // let renderer = createRenderer({
+    //   createElement(el){
+    //     return document.createElement(el)
+    //   },
+    //   setElementText(el,text){
+    //     el.innerHTML = text
+    //   },
+    //   insert(el,container){
+    //     container.appendChild(el)
+    //   },
+    //   patchProp(el,key,prevValue,nextValue){
+    //     console.log(el,key,nextValue)
+    //   }
 
-    })
+    // })
 
     // createElement
-    renderer.render(h("h1",{style:{color:'red'}},"hello"),app)
+    // renderer.render(h("h1",{style:{color:'red'}},"hello"),app)
+    render(h("h1",{style:{color:'red'}},"hello"),app)
+
 
   </script>
 
