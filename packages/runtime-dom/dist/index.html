@@ -33,7 +33,10 @@
 
     // createElement
     // renderer.render(h("h1",{style:{color:'red'}},"hello"),app)
-    render(h("h1",{style:{color:'red'}},"hello"),app)
+    // render(h("h1",{style:{color:'red'},onClick:()=>{alert(123)}},"hello"),app)
+    render(h("h1",{style:{color:'red'},onClick:()=>{alert(123)}},h("span","text")),app)
+
+    
 
 
   </script>
