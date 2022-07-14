@@ -20,8 +20,11 @@ var VueRuntimeDOM = (() => {
   // packages/runtime-dom/src/index.ts
   var src_exports = {};
   __export(src_exports, {
+    Text: () => Text2,
     createRenderer: () => createRenderer,
+    createVnode: () => createVnode,
     h: () => h,
+    isVnode: () => isVnode,
     render: () => render
   });
 
@@ -47,12 +50,12 @@ var VueRuntimeDOM = (() => {
       createText: hostCreateText,
       patchProp: hostPatchProp
     } = renderOptions2;
-    function mountChildren(el, children) {
+    const mountChildren = (el, children) => {
       for (let i = 0; i < children.length; i++) {
         patch(null, children[i], el);
       }
-    }
-    function mountElement(vnode, container) {
+    };
+    const mountElement = (vnode, container) => {
       let { type, props, children, shapeFlag } = vnode;
       let el = vnode.el = hostCreateElement(type);
       if (props) {
@@ -66,12 +69,26 @@ var VueRuntimeDOM = (() => {
         mountChildren(el, children);
       }
       hostInsert(el, container);
-    }
+    };
+    const processText = (oldN, newN, container) => {
+      if (oldN === null) {
+        hostInsert(newN.el = hostCreateText(newN.children), container);
+      }
+    };
     const patch = (oldN, newN, container) => {
       if (oldN === newN)
         return null;
+      const { type, shapeFlag } = newN;
       if (oldN === null) {
-        mountElement(newN, container);
+        switch (type) {
+          case Text:
+            processText(oldN, newN, container);
+            break;
+          default:
+            if (shapeFlag & 1 /* ELEMENT */) {
+              mountElement(newN, container);
+            }
+        }
       } else {
       }
     };
@@ -88,6 +105,7 @@ var VueRuntimeDOM = (() => {
   }
 
   // packages/runtime-core/src/vnode.ts
+  var Text2 = Symbol("Text");
   function isVnode(val) {
     return !!(val && val.__v_isVnode);
   }

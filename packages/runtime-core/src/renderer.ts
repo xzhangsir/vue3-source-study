@@ -24,14 +24,14 @@ export function createRenderer(renderOptions){
 } = renderOptions
 
 
-  function mountChildren(el,children){
+  const mountChildren = (el,children)=>{
     for(let i = 0 ; i < children.length;i++){
         patch(null,children[i],el)
     }
   }
 
 
-  function mountElement(vnode,container){
+  const mountElement = (vnode,container)=>{
     let {type,props,children,shapeFlag} = vnode
     // 将创建的真实元素挂载到虚拟节点上，后续方便复用节点和更新
     let el = vnode.el = hostCreateElement(type)
@@ -61,13 +61,30 @@ export function createRenderer(renderOptions){
 
   }
 
+  const processText = (oldN,newN,container)=>{
+    if(oldN === null){
+      hostInsert((newN.el = hostCreateText(newN.children)),container)
+    }
+  }
+
 
   // 核心的方法 参数：老节点 新节点 挂载的容器
   const patch = (oldN,newN,container)=>{
     if(oldN === newN) return null
+    const {type,shapeFlag} = newN
     if(oldN === null){
       // 初次渲染（包括元素的初次渲染和组件的初次渲染）
-      mountElement(newN,container)
+
+      switch(type){
+        case Text:
+            processText(oldN,newN,container)
+          break;
+        default:
+          if(shapeFlag & ShapeFlags.ELEMENT){
+              mountElement(newN,container)
+          }
+      }
+
 
     }else{
       // 更新流程
