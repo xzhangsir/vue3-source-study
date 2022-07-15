@@ -10,6 +10,16 @@ export function isVnode(val){
   return !!(val && val.__v_isVnode) 
 }
 
+export function isSameVnode(n1,n2){
+  // 判断两个虚拟节点是不是同一个
+  /**
+   *  - 标签名相同
+   *  - key一样
+  */
+ return (n1.type === n2.type) && (n1.key === n2.key)
+
+}
+
 // 虚拟节点有很多：比如：组件 元素 文本
 export function createVnode(type,props,children = null){
   //组合方案 shapeFlag  标识

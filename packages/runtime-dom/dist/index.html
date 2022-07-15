@@ -12,7 +12,7 @@
   <div id="app"></div>
   <script>
 
-    let {createRenderer,h,render} = VueRuntimeDOM
+    let {createRenderer,h,render,Text} = VueRuntimeDOM
 
     // 渲染器渲染的是虚拟dom
     // let renderer = createRenderer({
@@ -34,8 +34,19 @@
     // createElement
     // renderer.render(h("h1",{style:{color:'red'}},"hello"),app)
     // render(h("h1",{style:{color:'red'},onClick:()=>{alert(123)}},"hello"),app)
-    // render(h("h1",{style:{color:'red'},onClick:()=>{alert(123)}},h("span","text")),app)
-    render(h(Text,"hello"),app)
+    // render(h("h1",{style:{color:'red'},onClick:()=>{alert(123)}},[h("span","text"),"123"]),app)
+    // render(h("h1","hello1"),app)
+    // render(h(Text,"hell2o"),app)
+    render(h("h1",{style:{color:"red"}},"原来的"),app)
+
+    setTimeout(()=>{
+      // 卸载app下面的节点
+      // render(null,app)
+      // render(h(Text,'999'),app)
+      // render(h(Text,"hello"),app)
+      render(h("h1",{style:{color:"blue",background:"red"}},"更新后"),app)
+    },1000)
+
 
     
 
