@@ -25,17 +25,18 @@ export function createRenderer(renderOptions){
 } = renderOptions
 
 
-  const normalize = (child)=>{
+  const normalize = (children,i)=>{
     // 将 字符串文本 转为 （Text,"字符串"）
-    if(isString(child)){
-       return createVnode(Text,null,child)
+    if(isString(children[i])){
+       let vnode =  createVnode(Text,null,children[i])
+       children[i] = vnode
     }
-    return child
+    return children[i] 
   }
 
   const mountChildren = (el,children)=>{
     for(let i = 0 ; i < children.length;i++){
-      let child = normalize(children[i])
+      let child = normalize(children,i)
       patch(null,child,el)
     }
   }
@@ -98,14 +99,70 @@ export function createRenderer(renderOptions){
 
   }
 
+
+  const unmountChildren = (children)=>{
+    for(let i = 0 ; i < children.length ; i++){
+      unmount(children[i])
+    }
+  }
+
   const patchChildren = (oldN,newN,el)=>{
     // 比较两个虚拟节点的儿子的差异
     // el就是当前的父节点
     const c1 = oldN && oldN.children
     const c2 = newN && newN.children
 
-    // 儿子可能是  文本 空的 或者 数组
+    // 获取之前和当前需要更新的节点 shapeFlag
+
+    const prevShapeFlag = oldN.shapeFlag
+    const activeShapeFlag = newN.shapeFlag
+
+    // 儿子可能是  文本 空的null 或者 数组
     // 比较两个儿子列表的差异
+    /**
+     * 
+     * -  新儿子    旧儿子    操作方式
+     *  
+     *    文本      数组      删除旧儿子，设置文本内容
+     *    文本      文本      更新文本即可
+     *    文本       空       同上（更新文本即可）
+     * 
+     *    数组       数组      diff算法
+     *    数组       文本      清空文本 ，进行挂载
+     *    数组        空        直接进行挂载
+     * 
+     *    空        数组        删除所有儿子
+     *    空        文本        清空文本
+     *    空        空          不处理
+    */
+   if(activeShapeFlag & ShapeFlags.TEXT_CHILDREN){
+    // 现在变 文本
+    if(prevShapeFlag & ShapeFlags.ARRAY_CHILDREN){
+      // 如果原来的是数组  先删除所有的子节点
+      unmountChildren(c1)
+    }
+    if(c1 !== c2){
+      hostSetElementText(el,c2)
+    }
+   }else if(activeShapeFlag & ShapeFlags.ARRAY_CHILDREN){
+    // 现在变数组
+      if(prevShapeFlag & ShapeFlags.ARRAY_CHILDREN){
+        // diff算法 之前是数组
+
+      }else if(prevShapeFlag & ShapeFlags.TEXT_CHILDREN){
+        // 之前是文本
+        // 先清空文本
+         hostSetElementText(el,"")
+         mountChildren(el,c2)
+      }
+   }else{
+    // 现在变空 
+      hostSetElementText(el,"")
+   }
+
+
+
+
 
   }
 
@@ -132,7 +189,7 @@ export function createRenderer(renderOptions){
        * - 老的和新的一样 复用 ，属性可能不一样 再对比属性，更新属性
        * - 比儿子
       */
-      patchElement(oldN,newN,container)
+      patchElement(oldN,newN)
     }
   }
 

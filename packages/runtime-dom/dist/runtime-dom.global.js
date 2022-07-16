@@ -83,15 +83,16 @@ var VueRuntimeDOM = (() => {
       createText: hostCreateText,
       patchProp: hostPatchProp
     } = renderOptions2;
-    const normalize = (child) => {
-      if (isString(child)) {
-        return createVnode(Text, null, child);
+    const normalize = (children, i) => {
+      if (isString(children[i])) {
+        let vnode = createVnode(Text, null, children[i]);
+        children[i] = vnode;
       }
-      return child;
+      return children[i];
     };
     const mountChildren = (el, children) => {
       for (let i = 0; i < children.length; i++) {
-        let child = normalize(children[i]);
+        let child = normalize(children, i);
         patch(null, child, el);
       }
     };
@@ -130,9 +131,32 @@ var VueRuntimeDOM = (() => {
         }
       }
     };
+    const unmountChildren = (children) => {
+      for (let i = 0; i < children.length; i++) {
+        unmount(children[i]);
+      }
+    };
     const patchChildren = (oldN, newN, el) => {
       const c1 = oldN && oldN.children;
       const c2 = newN && newN.children;
+      const prevShapeFlag = oldN.shapeFlag;
+      const activeShapeFlag = newN.shapeFlag;
+      if (activeShapeFlag & 8 /* TEXT_CHILDREN */) {
+        if (prevShapeFlag & 16 /* ARRAY_CHILDREN */) {
+          unmountChildren(c1);
+        }
+        if (c1 !== c2) {
+          hostSetElementText(el, c2);
+        }
+      } else if (activeShapeFlag & 16 /* ARRAY_CHILDREN */) {
+        if (prevShapeFlag & 16 /* ARRAY_CHILDREN */) {
+        } else if (prevShapeFlag & 8 /* TEXT_CHILDREN */) {
+          hostSetElementText(el, "");
+          mountChildren(el, c2);
+        }
+      } else {
+        hostSetElementText(el, "");
+      }
     };
     const patchElement = (oldN, newN) => {
       let el = newN.el = oldN.el;
@@ -145,7 +169,7 @@ var VueRuntimeDOM = (() => {
       if (oldN === null) {
         mountElement(newN, container);
       } else {
-        patchElement(oldN, newN, container);
+        patchElement(oldN, newN);
       }
     };
     const patch = (oldN, newN, container) => {
