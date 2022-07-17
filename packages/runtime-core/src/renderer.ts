@@ -106,6 +106,11 @@ export function createRenderer(renderOptions){
     }
   }
 
+  const patchKeyChildren = (c1,c2,el)=>{
+    // 比较两个儿子的差异
+
+  }
+
   const patchChildren = (oldN,newN,el)=>{
     // 比较两个虚拟节点的儿子的差异
     // el就是当前的父节点
@@ -148,6 +153,7 @@ export function createRenderer(renderOptions){
     // 现在变数组
       if(prevShapeFlag & ShapeFlags.ARRAY_CHILDREN){
         // diff算法 之前是数组
+        patchKeyChildren(c1,c2,el)  //全量比对
 
       }else if(prevShapeFlag & ShapeFlags.TEXT_CHILDREN){
         // 之前是文本

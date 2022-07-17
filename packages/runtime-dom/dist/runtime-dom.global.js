@@ -136,6 +136,8 @@ var VueRuntimeDOM = (() => {
         unmount(children[i]);
       }
     };
+    const patchKeyChildren = (c1, c2, el) => {
+    };
     const patchChildren = (oldN, newN, el) => {
       const c1 = oldN && oldN.children;
       const c2 = newN && newN.children;
@@ -150,6 +152,7 @@ var VueRuntimeDOM = (() => {
         }
       } else if (activeShapeFlag & 16 /* ARRAY_CHILDREN */) {
         if (prevShapeFlag & 16 /* ARRAY_CHILDREN */) {
+          patchKeyChildren(c1, c2, el);
         } else if (prevShapeFlag & 8 /* TEXT_CHILDREN */) {
           hostSetElementText(el, "");
           mountChildren(el, c2);
