@@ -49,10 +49,11 @@
       // render(h(Text,'999'),app)
       // render(h(Text,"hello"),app)
       render(h("h1",{style:{color:"blue",background:"red"}},
+       h("li",{key:'e'},'e'),
         h("li",{key:'a'},'a'),
         h("li",{key:'b'},'b'),
-        h("li",{key:'d'},'d'),
-        h("li",{key:'e'},'e')
+        h("li",{key:'c'},'c'),
+        
       ),app)
     },1000)
 
