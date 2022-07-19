@@ -222,6 +222,8 @@ export function createRenderer(renderOptions){
     const toBePatched = e2 - s2 + 1; //新的总个数
     // 记录是否比对过的映射表
     const newIndexToOldIndexArr = new Array(toBePatched).fill(0)
+
+    
     for(let i = s1 ; i <= e1 ;i++){
       const oldChild = c1[i] //老的孩子
       let newIndex = keyToNewIndexMap.get(oldChild.key) //新孩子的索引
@@ -233,8 +235,12 @@ export function createRenderer(renderOptions){
         patch(oldChild,c2[newIndex],el)
       }
      }
-     
+
+     //  获取最长递增子序列
+    let increment = getSequence(newIndexToOldIndexArr)
+
     // 需要移动位置
+    let j = increment.length - 1
     for(let i = toBePatched - 1 ; i >= 0 ; i--){
       let index = i + s2
       let current = c2[index]
@@ -243,45 +249,13 @@ export function createRenderer(renderOptions){
         // 创建
         patch(null,current,el,anchor)
       }else{
-        // 对比过的 直接插入  复用了老节点
-        hostInsert(current.el,el,anchor)
+        if(i !== increment[j]){
+           // 对比过的 直接插入  复用了老节点
+          hostInsert(current.el,el,anchor)
+        }else{
+          j--
+        }
       }
-      
-
-      //最长递增子序列
-      /**
-       * [5,3,4,0]
-       *  所以 3和4不用动 只要动5就行
-       * 
-      */
-
-      /**
-       *  3 2 8 9 5 6 7 11 15
-       * 
-       * - 2 8 9 11 15
-       * - 2 5 6 7 11 15  这个是最长递增子序列  
-       * 
-      */
-      // 算的是个数  
-      // 贪心算法 + 二分查找  
-      // 找最有潜力的
-      // 3
-      // 2
-      // 2 8
-      // 2 8 9  和 5 比 二分
-      // 2 5 9  和 6 比 二分
-      // 2 5 6  
-      // 2 5 6 7
-      // 2 5 6 11
-      // 2 5 6 11 15
-
-      /**
-       * 思路
-       * 1:当前这一项比我们最后一项大，则直接放到末尾
-       * 2：如果当前这一项比最后一项小，需要在序列通过二分查找到比当前大的这一项，用他来替换掉
-       * 3：最优的情况，就是默认递增的
-      */
-
     } 
 
 
@@ -295,8 +269,47 @@ export function createRenderer(renderOptions){
 
   }
 
+  
+  //最长递增子序列
+  /**
+   * [5,3,4,0]
+   *  所以 3和4不用动 只要动5就行
+   * 
+  */
+
+  /**
+   *  3 2 8 9 5 6 7 11 15
+   * 
+   * - 2 8 9 11 15
+   * - 2 5 6 7 11 15  这个是最长递增子序列  
+   * 
+  */
+  // 算的是个数  
+  // 贪心算法 + 二分查找  
+  // 找最有潜力的
+  // 3
+  // 2
+  // 2 8
+  // 2 8 9  和 5 比 二分
+  // 2 5 9  和 6 比 二分
+  // 2 5 6  
+  // 2 5 6 7
+  // 2 5 6 11
+  // 2 5 6 11 15
+
+  /**
+   * 思路
+   * 1:当前这一项比我们最后一项大，则直接放到末尾
+   * 2：如果当前这一项比最后一项小，需要在序列通过二分查找到比当前大的这一项，用他来替换掉
+   * 3：最优的情况，就是默认递增的
+  */
+
   function getSequence(arr){
     const len = arr.length
+
+    // 使用标记索引的方式 最终通过最后一项将结果还原
+    const p = new Array(len).fill(0) /** */
+
     const result = [0]
 
     let start,end,middle;
@@ -306,8 +319,13 @@ export function createRenderer(renderOptions){
       let arrI = arr[i]
       if(arrI !== 0){
         resultLastIndex = result[result.length - 1]
+        // 比较最后一项和当前项的值
+        // 如果当前的比最后一项大 则将当前索引加入
         if(arr[resultLastIndex] < arrI){
           result.push(i)
+
+          // 当前放在末尾的要记住他前面的那个人是谁
+          p[i] = resultLastIndex /** */
           continue
         }
         // 这里我们需要通过二分查找，在结果集中找到比当前值最大的，用当前值的索引将其替换掉
@@ -327,13 +345,27 @@ export function createRenderer(renderOptions){
         }
 
         // 找到需要替换的  直接替换
+        // 用当前这一项 替换掉已有的 比当前大的哪一项。
+        // 找更有潜力的
         if(arr[result[end]] > arrI){
           result[end] = i
+          p[i] = result[end - 1] /** */
         }
       }
     }
+
+  // 通过最后一项进行回溯
+    ;let i = result.length
+    let last = result[i - 1]
+    while(i-- > 0){
+      result[i] = last
+      last = p[last]
+    }
+
+
     return result
   }
+
 
 
 
