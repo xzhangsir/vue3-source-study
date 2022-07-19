@@ -249,6 +249,39 @@ export function createRenderer(renderOptions){
       
 
       //最长递增子序列
+      /**
+       * [5,3,4,0]
+       *  所以 3和4不用动 只要动5就行
+       * 
+      */
+
+      /**
+       *  3 2 8 9 5 6 7 11 15
+       * 
+       * - 2 8 9 11 15
+       * - 2 5 6 7 11 15  这个是最长递增子序列  
+       * 
+      */
+      // 算的是个数  
+      // 贪心算法 + 二分查找  
+      // 找最有潜力的
+      // 3
+      // 2
+      // 2 8
+      // 2 8 9  和 5 比 二分
+      // 2 5 9  和 6 比 二分
+      // 2 5 6  
+      // 2 5 6 7
+      // 2 5 6 11
+      // 2 5 6 11 15
+
+      /**
+       * 思路
+       * 1:当前这一项比我们最后一项大，则直接放到末尾
+       * 2：如果当前这一项比最后一项小，需要在序列通过二分查找到比当前大的这一项，用他来替换掉
+       * 3：最优的情况，就是默认递增的
+      */
+
     } 
 
 
@@ -261,6 +294,49 @@ export function createRenderer(renderOptions){
 
 
   }
+
+  function getSequence(arr){
+    const len = arr.length
+    const result = [0]
+
+    let start,end,middle;
+    let resultLastIndex;
+
+    for(let i = 0 ; i < len ; i++){
+      let arrI = arr[i]
+      if(arrI !== 0){
+        resultLastIndex = result[result.length - 1]
+        if(arr[resultLastIndex] < arrI){
+          result.push(i)
+          continue
+        }
+        // 这里我们需要通过二分查找，在结果集中找到比当前值最大的，用当前值的索引将其替换掉
+
+        // 递增序列  采用二分查找 
+        start = 0 ; 
+        end = result.length - 1;
+
+        while(start < end){
+          middle = ((start + end)/2)|0
+
+          if(arr[result[middle]] < arrI){
+            start = middle + 1
+          }else{
+            end = middle
+          }
+        }
+
+        // 找到需要替换的  直接替换
+        if(arr[result[end]] > arrI){
+          result[end] = i
+        }
+      }
+    }
+    return result
+  }
+
+
+
 
   const patchChildren = (oldN,newN,el)=>{
     // 比较两个虚拟节点的儿子的差异

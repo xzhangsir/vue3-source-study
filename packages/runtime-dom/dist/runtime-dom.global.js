@@ -207,6 +207,36 @@ var VueRuntimeDOM = (() => {
         }
       }
     };
+    function getSequence(arr) {
+      const len = arr.length;
+      const result = [0];
+      let start, end, middle;
+      let resultLastIndex;
+      for (let i = 0; i < len; i++) {
+        let arrI = arr[i];
+        if (arrI !== 0) {
+          resultLastIndex = result[result.length - 1];
+          if (arr[resultLastIndex] < arrI) {
+            result.push(i);
+            continue;
+          }
+          start = 0;
+          end = result.length - 1;
+          while (start < end) {
+            middle = (start + end) / 2 | 0;
+            if (arr[result[middle]] < arrI) {
+              start = middle + 1;
+            } else {
+              end = middle;
+            }
+          }
+          if (arr[result[end]] > arrI) {
+            result[end] = i;
+          }
+        }
+      }
+      return result;
+    }
     const patchChildren = (oldN, newN, el) => {
       const c1 = oldN && oldN.children;
       const c2 = newN && newN.children;
