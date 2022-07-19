@@ -1,5 +1,5 @@
 import { isString, ShapeFlags } from "@vue/shared"
-import { createVnode,Text,isSameVnode } from "./vnode"
+import { createVnode,Text,isSameVnode, Fragment } from "./vnode"
 
 export function createRenderer(renderOptions){
 
@@ -458,6 +458,14 @@ export function createRenderer(renderOptions){
     }
   }
 
+  const processFragment = (oldN,newN,container)=>{
+    if(oldN == null){
+      mountChildren(container,newN.children)
+    }else{
+      patchChildren(oldN,newN,container)
+    }
+  }
+
 
   // 核心的方法 参数：老节点 新节点 挂载的容器
   const patch = (oldN,newN,container,anchor = null)=>{
@@ -475,6 +483,9 @@ export function createRenderer(renderOptions){
     switch(type){
       case Text:
           processText(oldN,newN,container)
+        break;
+      case Fragment:
+          processFragment(oldN,newN,container)
         break;
       default:
         if(shapeFlag & ShapeFlags.ELEMENT){

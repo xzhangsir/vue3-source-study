@@ -11,8 +11,8 @@
 <body>
   <div id="app"></div>
   <script>
-
-    let {createRenderer,h,render,Text} = VueRuntimeDOM
+// 
+    let {createRenderer,h,render,Text,Fragment} = VueRuntimeDOM
 
     // 渲染器渲染的是虚拟dom
     // let renderer = createRenderer({
@@ -37,7 +37,7 @@
     // render(h("h1",{style:{color:'red'},onClick:()=>{alert(123)}},[h("span","text"),"123"]),app)
     // render(h("h1","hello1"),app)
     // render(h(Text,"hell2o"),app)
-    render(h("h1",{style:{color:"red"}},
+/*     render(h("h1",{style:{color:"red"}},
       h("li",{key:'a'},'a'),
       h("li",{key:'b'},'b'),
       h("li",{key:'c'},'c'),
@@ -63,7 +63,10 @@
         h("li",{key:'g'},'g')
       ),app)
     },1000)
+ */
 
+
+ render(h(Fragment,[h(Text,"hello"),h("h1","world")]),app)
 
     
 
