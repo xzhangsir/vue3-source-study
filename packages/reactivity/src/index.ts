@@ -1,7 +1,7 @@
 // import {isObject} from "@vue/shared"
 // console.log(isObject({}))
 
-export {effect} from "./effect"
+export {effect,ReactiveEffect} from "./effect"
 export {reactive} from "./reactive"
 export {computed} from "./computed"
 export {watch} from "./watch"

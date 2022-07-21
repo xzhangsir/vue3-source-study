@@ -1,4 +1,6 @@
+import { reactive,ReactiveEffect } from "@vue/reactivity"
 import { isString, ShapeFlags } from "@vue/shared"
+import {queueJob} from './scheduler'
 import { createVnode,Text,isSameVnode, Fragment } from "./vnode"
 
 export function createRenderer(renderOptions){
@@ -466,6 +468,59 @@ export function createRenderer(renderOptions){
     }
   }
 
+  const mountComponent = (vnode,container,anchor)=>{
+    let {data = ()=>({}),render} = vnode.type
+    // state 作为组件的状态
+    const state = reactive(data())  //这也是pinia的核心代码
+    // 组件的实例
+    const instance = {
+      state,
+      vnode, //v2中组件的虚拟节点叫$vnode 渲染的内容叫 _vnode
+      subTree:null, //V3中组件的虚拟节点叫vnode 渲染的节点叫subTree
+      isMounted:false,   //组件是否挂载
+      update:null
+    }
+
+    const componentUpdateFn = ()=>{
+      // 区分是初始化 还是要更新
+      if(!instance.isMounted){ //初始化
+
+        const subTree = render.call(state)
+        // 创造了subtree的真实节点 并插入了
+        patch(null,subTree,container,anchor)
+
+        instance.subTree = subTree
+
+        instance.isMounted = true
+      }else{
+        // 组件内部更新
+        const subTree = render.call(state)
+        patch(instance.subTree,subTree,container,anchor)
+        instance.subTree = subTree
+
+      }
+    }
+
+    // ()=>queueJob(instance.update)  组件的异步更新
+    const effect = new ReactiveEffect(componentUpdateFn,()=>queueJob(instance.update))
+
+    // 将组件强制更新逻辑 保存到组件的实例上
+    let update = instance.update = effect.run.bind(effect)  //  调用这个方法 可以让组件强制重新渲染
+    update()
+
+  }
+
+  const processComponent = (oldN,newN,container,anchor)=>{
+    // 有普通组件和函数式组件 V3不建议使用函数式组件
+    if(oldN === null){
+      mountComponent(newN,container,anchor)
+    }else{
+      // 组件更新靠的是props
+    }
+
+  }
+
+
 
   // 核心的方法 参数：老节点 新节点 挂载的容器
   const patch = (oldN,newN,container,anchor = null)=>{
@@ -490,6 +545,8 @@ export function createRenderer(renderOptions){
       default:
         if(shapeFlag & ShapeFlags.ELEMENT){
           processElement(oldN,newN,container,anchor)
+        }else if(shapeFlag & ShapeFlags.COMPONENT){
+          processComponent(oldN,newN,container,anchor)
         }
     }
   }

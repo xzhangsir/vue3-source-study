@@ -66,9 +66,25 @@
  */
 
 
- render(h(Fragment,[h(Text,"hello"),h("h1","world")]),app)
+//  render(h(Fragment,[h(Text,"hello"),h("h1","world")]),app)
 
-    
+    const VueComponent = {
+      data(){
+        return {
+          name:"zx",
+          age:13
+        }
+      },
+      render(){
+        // setTimeout(()=>{
+        //   this.age++
+        //   this.name += "1"
+        // },1000)
+        return h('p',`${this.name}今年${this.age}岁了`)
+      }
+    }
+
+    render(h(VueComponent),app)
 
 
   </script>
