@@ -21,6 +21,10 @@ export const isArray = Array.isArray
 export const assign = Object.assign
 
 
+const hasOwnProperty = Object.prototype.hasOwnProperty
+
+export const hasOwn = (v,k)=>hasOwnProperty.call(v,k)
+
 
 
 export const enum ShapeFlags { // 形状标识

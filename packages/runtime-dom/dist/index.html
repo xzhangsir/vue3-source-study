@@ -68,7 +68,7 @@
 
 //  render(h(Fragment,[h(Text,"hello"),h("h1","world")]),app)
 
-    const VueComponent = {
+   /*  const VueComponent = {
       data(){
         return {
           name:"zx",
@@ -76,15 +76,25 @@
         }
       },
       render(){
-        // setTimeout(()=>{
-        //   this.age++
-        //   this.name += "1"
-        // },1000)
+        setTimeout(()=>{
+          this.age++
+          this.name += "1"
+        },1000)
         return h('p',`${this.name}今年${this.age}岁了`)
       }
-    }
+    } */
 
-    render(h(VueComponent),app)
+
+     const VueComponent = {
+        props:{
+          address:String
+        },
+        render(){
+          return h('p',[this.address])
+        }
+      }
+
+    render(h(VueComponent,{address:"中国"}),app)
 
 
   </script>

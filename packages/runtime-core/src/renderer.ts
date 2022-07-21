@@ -1,5 +1,6 @@
 import { reactive,ReactiveEffect } from "@vue/reactivity"
 import { isString, ShapeFlags } from "@vue/shared"
+import { initProps } from "./componentProps"
 import {queueJob} from './scheduler'
 import { createVnode,Text,isSameVnode, Fragment } from "./vnode"
 
@@ -468,8 +469,12 @@ export function createRenderer(renderOptions){
     }
   }
 
+
   const mountComponent = (vnode,container,anchor)=>{
-    let {data = ()=>({}),render} = vnode.type
+    let {data = ()=>({}),render,props:propsOptions = {}} = vnode.type
+
+    // console.log(propsOptions);
+    
     // state 作为组件的状态
     const state = reactive(data())  //这也是pinia的核心代码
     // 组件的实例
@@ -478,8 +483,13 @@ export function createRenderer(renderOptions){
       vnode, //v2中组件的虚拟节点叫$vnode 渲染的内容叫 _vnode
       subTree:null, //V3中组件的虚拟节点叫vnode 渲染的节点叫subTree
       isMounted:false,   //组件是否挂载
-      update:null
+      update:null,
+      propsOptions,
+      props:{},
+      attrs:{}
     }
+
+    initProps(instance,vnode.props)
 
     const componentUpdateFn = ()=>{
       // 区分是初始化 还是要更新

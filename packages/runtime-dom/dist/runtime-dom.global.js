@@ -115,6 +115,8 @@ var VueRuntimeDOM = (() => {
     return typeof val === "string";
   };
   var isArray = Array.isArray;
+  var hasOwnProperty = Object.prototype.hasOwnProperty;
+  var hasOwn = (v, k) => hasOwnProperty.call(v, k);
 
   // packages/reactivity/src/baseHandler.ts
   var mutableHandlers = {
@@ -153,6 +155,25 @@ var VueRuntimeDOM = (() => {
     const proxy = new Proxy(target, mutableHandlers);
     reactiveMap.set(target, proxy);
     return proxy;
+  }
+
+  // packages/runtime-core/src/componentProps.ts
+  function initProps(instance, rawProps) {
+    const props = {};
+    const attrs = {};
+    const options = instance.propsOptions || {};
+    if (rawProps) {
+      for (let key in rawProps) {
+        const val = rawProps[key];
+        if (hasOwn(options, key)) {
+          props[key] = val;
+        } else {
+          attrs[key] = val;
+        }
+      }
+    }
+    instance.props = reactive(props);
+    instance.attrs = attrs;
   }
 
   // packages/runtime-core/src/scheduler.ts
@@ -439,15 +460,19 @@ var VueRuntimeDOM = (() => {
       }
     };
     const mountComponent = (vnode, container, anchor) => {
-      let { data = () => ({}), render: render3 } = vnode.type;
+      let { data = () => ({}), render: render3, props: propsOptions = {} } = vnode.type;
       const state = reactive(data());
       const instance = {
         state,
         vnode,
         subTree: null,
         isMounted: false,
-        update: null
+        update: null,
+        propsOptions,
+        props: {},
+        attrs: {}
       };
+      initProps(instance, vnode.props);
       const componentUpdateFn = () => {
         if (!instance.isMounted) {
           const subTree = render3.call(state);
