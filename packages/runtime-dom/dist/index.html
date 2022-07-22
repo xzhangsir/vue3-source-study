@@ -87,14 +87,20 @@
 
      const VueComponent = {
         props:{
-          address:String
+          address:String,
+          c:{}
         },
         render(){
-          return h('p',[this.address])
+          // setTimeout(()=>{
+          //   this.c.n = 123
+          // props 应该是浅代理 不允许这样修改
+          // },1000)
+          // this.address = "100"
+          return h('p',this.address + this.$attrs.a + this.c.n)
         }
       }
 
-    render(h(VueComponent,{address:"中国"}),app)
+    render(h(VueComponent,{address:"中国",a:1,c:{n:1}}),app)
 
 
   </script>

@@ -21,9 +21,11 @@ export function initProps(instance,rawProps){
       }
     }
   }
+  console.log(props)
+  // console.log(attrs)
 
   // 这里的props 不希望在组件内部被更改 但是props必须是响应式的
-  // 因为后续属性变了 要更新视图 用的应该是 shallowReactive
+  // 因为后续属性变了 需要更新视图 用的应该是 shallowReactive
   instance.props = reactive(props)
   instance.attrs = attrs
 

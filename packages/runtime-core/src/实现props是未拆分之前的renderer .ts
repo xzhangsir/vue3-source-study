@@ -1,6 +1,6 @@
-import { ReactiveEffect } from "@vue/reactivity"
-import { isNumber, isString, ShapeFlags } from "@vue/shared"
-import { createComponentInstance, setupComponent } from "./component"
+import { reactive,ReactiveEffect } from "@vue/reactivity"
+import { hasOwn, isString, ShapeFlags } from "@vue/shared"
+import { initProps } from "./componentProps"
 import {queueJob} from './scheduler'
 import { createVnode,Text,isSameVnode, Fragment } from "./vnode"
 
@@ -30,7 +30,7 @@ export function createRenderer(renderOptions){
 
   const normalize = (children,i)=>{
     // 将 字符串文本 转为 （Text,"字符串"）
-    if(isString(children[i]) || isNumber(children[i])){
+    if(isString(children[i])){
        let vnode =  createVnode(Text,null,children[i])
        children[i] = vnode
     }
@@ -469,25 +469,74 @@ export function createRenderer(renderOptions){
     }
   }
 
-  
+  const publicPropertyMap = {
+    $attrs:(i)=>i.attrs
+  }
 
   const mountComponent = (vnode,container,anchor)=>{
     // 1 ) 要创造一个组价的实例
-    let instance =  vnode.component = createComponentInstance(vnode)
 
     // 2 ) 给实例上赋值
-    setupComponent(instance)
 
     // 3 ） 创造一个effect
 
-    setupRenderEffect(instance,container,anchor)
+    
+    let {data = ()=>({}),render,props:propsOptions = {}} = vnode.type
+
+    // console.log(propsOptions);
+    
+    // state 作为组件的状态
+    const state = reactive(data())  //这也是pinia的核心代码
+    // 组件的实例
+    const instance = {
+      state,
+      vnode, //v2中组件的虚拟节点叫$vnode 渲染的内容叫 _vnode
+      subTree:null, //V3中组件的虚拟节点叫vnode 渲染的节点叫subTree
+      isMounted:false,   //组件是否挂载
+      update:null,
+      propsOptions,
+      props:{},
+      attrs:{},
+      proxy:null
+    }
+
+    initProps(instance,vnode.props)
+    
+
+    instance.proxy = new Proxy(instance,{
+      get(target,key){
+        const {state,props} = target
+        if(state && hasOwn(state,key)){
+          return state[key]
+        }else if(props && hasOwn(props,key)){
+          return props[key]
+        }
+
+        let getter = publicPropertyMap[key] //this.$attrs
+        
+        if(getter){
+          return getter(target)
+        }
+      },
+      set(target,key,val){
+        const {state,props} = target
+        if(state && hasOwn(state,key)){
+          state[key] = val
+          return true
+        //用户操作的属性是代理对象 这里屏蔽了
+        // 但我们可以通过instance.props 拿到真实的props
+        }else if(props && hasOwn(props,key)){
+          console.warn("组件内不能修改组件的props" + (key as string));
+          return false
+        }
+
+        return true
+
+      }
+    })
 
 
 
-  }
-
-  const setupRenderEffect = (instance,container,anchor)=>{
-    const {render} = instance
     const componentUpdateFn = ()=>{
       // 区分是初始化 还是要更新
       if(!instance.isMounted){ //初始化
@@ -517,6 +566,7 @@ export function createRenderer(renderOptions){
     // 将组件强制更新逻辑 保存到组件的实例上
     let update = instance.update = effect.run.bind(effect)  //  调用这个方法 可以让组件强制重新渲染
     update()
+
   }
 
   const processComponent = (oldN,newN,container,anchor)=>{
