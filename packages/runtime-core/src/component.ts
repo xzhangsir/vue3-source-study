@@ -1,5 +1,5 @@
-import { reactive } from "@vue/reactivity"
-import { hasOwn, isFunction } from "@vue/shared"
+import { proxyRefs, reactive } from "@vue/reactivity"
+import { hasOwn, isFunction, isObject } from "@vue/shared"
 import { initProps } from "./componentProps"
 
 export function createComponentInstance(vnode){
@@ -14,7 +14,8 @@ export function createComponentInstance(vnode){
     props:{},
     attrs:{},
     proxy:null,
-    render:null
+    render:null,
+    setupState:{}
   }
   
   return instance
@@ -30,9 +31,11 @@ export function setupComponent(instance){
 
   instance.proxy = new Proxy(instance,{
     get(target,key){
-      const {data,props} = target
+      const {data,props,setupState} = target
       if(data && hasOwn(data,key)){
         return data[key]
+      }else if(props && hasOwn(setupState,key)){
+        return setupState[key]
       }else if(props && hasOwn(props,key)){
         return props[key]
       }
@@ -44,13 +47,17 @@ export function setupComponent(instance){
       }
     },
     set(target,key,val){
-      const {data,props} = target
+      const {data,props,setupState} = target
       if(data && hasOwn(data,key)){
         data[key] = val
         return true
-      //用户操作的属性是代理对象 这里屏蔽了
-      // 但我们可以通过instance.props 拿到真实的props
+      }else if(data && hasOwn(setupState,key)){
+        setupState[key] = val
+        return true
       }else if(props && hasOwn(props,key)){
+        //用户操作的属性是代理对象 这里屏蔽了
+      // 但我们可以通过instance.props 拿到真实的props
+      
         console.warn("组件内不能修改组件的props" + (key as string));
         return false
       }
@@ -70,6 +77,29 @@ export function setupComponent(instance){
       instance.data = reactive(data.call(instance.proxy))
   }
   
-  instance.render = type.render
+
+  let setup = type.setup
+  console.log(type);
+  
+
+  if(setup){
+    const setupContext = {}
+    const setupResult = setup(instance.props,setupContext)
+
+    if(isFunction(setupResult)){
+      // setup 返回的是render
+      instance.render = setupResult
+    }else if(isObject(setupResult)){
+      // 模板中的ref就不用去.value了
+      instance.setupState = proxyRefs(setupResult)
+    }
+    
+  }
+
+  if(!instance.render){
+    instance.render = type.render
+  }
+
+
 
 }
