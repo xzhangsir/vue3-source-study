@@ -13,6 +13,8 @@
   <script>
 
     let {createRenderer,h,render,Text,Fragment,ref} = VueRuntimeDOM
+    // setup  可以返回 对象 和 函数
+
 
  /*    const VueComponent = {
       props:{
@@ -35,7 +37,7 @@
         return h('h1',[this.name,this.age,this.address])
       }
     } */
-
+/* 
      const VueComponent = {
       props:{
         address:String
@@ -55,7 +57,44 @@
 
     render(h(VueComponent,{address:"diqu"}),app)
   
-  
+   */
+
+/*    const VueComponent = {
+    setup(props,{emit}){
+      return ()=>{
+        return h("h1",{onClick:()=>emit('xxx','ok')},'hello')
+      }
+    }
+   }
+
+   render(h(VueComponent,{onXxx:(val)=>alert(val)}),app)
+ */
+
+//  插槽
+
+
+  const MyCom = {
+    render(){
+      return h(Fragment,[
+          h('div',this.$slots.header()),
+          "center",
+          h('div',this.$slots.footer())
+        ])
+    }
+  }
+
+
+
+   const  VueComponent = {
+    render (){
+      return h(MyCom,null,{
+        header:()=>h('p','header'),
+        footer:()=>h('p','footer')
+      })
+    }
+   }
+
+   render(h(VueComponent),app)
 
   </script>
 

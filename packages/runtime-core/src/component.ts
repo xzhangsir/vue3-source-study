@@ -1,5 +1,5 @@
 import { proxyRefs, reactive } from "@vue/reactivity"
-import { hasOwn, isFunction, isObject } from "@vue/shared"
+import { hasOwn, isFunction, isObject, ShapeFlags } from "@vue/shared"
 import { initProps } from "./componentProps"
 
 export function createComponentInstance(vnode){
@@ -15,19 +15,28 @@ export function createComponentInstance(vnode){
     attrs:{},
     proxy:null,
     render:null,
-    setupState:{}
+    setupState:{},
+    slots:{} //插槽相关
   }
   
   return instance
 }
 
 const publicPropertyMap = {
-  $attrs:(i)=>i.attrs
+  $attrs:(i)=>i.attrs,
+  $slots:(i)=>i.slots,
+}
+
+function initSlots(instance,children){
+  if(instance.vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN){
+    instance.slots = children
+  }
 }
 
 export function setupComponent(instance){
-  let {props,type} = instance.vnode
+  let {props,type,children} = instance.vnode
   initProps(instance,props)
+  initSlots(instance,children) //初始化插槽
 
   instance.proxy = new Proxy(instance,{
     get(target,key){
@@ -79,11 +88,20 @@ export function setupComponent(instance){
   
 
   let setup = type.setup
-  console.log(type);
+  // console.log(type);
   
 
   if(setup){
-    const setupContext = {}
+    const setupContext = { //典型的发布订阅模式
+      // 事件的实现原理
+      emit:(event,...args)=>{
+        const eventName = `on${event[0].toUpperCase()}${event.slice(1)}`
+        const handler = instance.vnode.props[eventName]
+        handler && handler(...args)
+      },
+      attrs:instance.attrs,
+      slots:instance.slots
+    }
     const setupResult = setup(instance.props,setupContext)
 
     if(isFunction(setupResult)){
