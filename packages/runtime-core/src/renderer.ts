@@ -1,5 +1,5 @@
 import { ReactiveEffect } from "@vue/reactivity"
-import { isNumber, isString, ShapeFlags } from "@vue/shared"
+import { invokeArrayFns, isNumber, isString, ShapeFlags } from "@vue/shared"
 import { createComponentInstance, setupComponent } from "./component"
 import { hasPropsChanged, updateProps } from "./componentProps"
 import {queueJob} from './scheduler'
@@ -503,27 +503,45 @@ export function createRenderer(renderOptions){
       // 区分是初始化 还是要更新
       if(!instance.isMounted){ //初始化
 
+        let {bm,m} = instance
+        if(bm){
+          invokeArrayFns(bm)
+        }
+
         // const subTree = render.call(state)
         const subTree = render.call(instance.proxy)
 
         // 创造了subtree的真实节点 并插入了
         patch(null,subTree,container,anchor)
 
+        if(m){
+          invokeArrayFns(m)
+        }
+
+
         instance.subTree = subTree
 
         instance.isMounted = true
       }else{
         // 组件内部更新
-        let {next} = instance
+        let {next,bu,u} = instance
         if(next){
           // 更新前需要拿到最新的属性来进行更新
           updateComponentPreRender(instance,next)
+        }
+
+        if(bu){
+          invokeArrayFns(bu)
         }
 
         // const subTree = render.call(state)
         const subTree = render.call(instance.proxy)
         patch(instance.subTree,subTree,container,anchor)
         instance.subTree = subTree
+
+         if(u){
+          invokeArrayFns(u)
+        }
 
       }
     }

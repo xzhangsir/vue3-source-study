@@ -12,7 +12,8 @@
   <div id="app"></div>
   <script>
 
-    let {createRenderer,h,render,Text,Fragment,ref} = VueRuntimeDOM
+    let {createRenderer,h,render,reactive,Text,Fragment,
+        ref,toRefs,onBeforeMount,onMounted,onBeforeUpdate,onUpdated,getCurrentInstance} = VueRuntimeDOM
     // setup  可以返回 对象 和 函数
 
 
@@ -73,7 +74,7 @@
 //  插槽
 
 
-  const MyCom = {
+/*   const MyCom = {
     render(){
       return h(Fragment,[
           h('div',this.$slots.header()),
@@ -94,7 +95,56 @@
     }
    }
 
-   render(h(VueComponent),app)
+   render(h(VueComponent),app) */
+
+  //  生命周期
+
+
+  const useCounter = (count)=>{
+    const state = reactive({count})
+    const handleClick = ()=>{
+      state.count++
+    }
+    onBeforeMount(()=>{
+      console.log("onBeforeMount",getCurrentInstance());
+    })
+    onMounted(()=>{
+      console.log("onMounted");
+    })
+     onBeforeUpdate(()=>{
+        console.log("onBeforeUpdate");
+      })
+    return {
+      state,
+      handleClick
+    }
+  }
+  
+  const VueComponent = {
+    setup(){
+      const {state,handleClick} = useCounter(1)
+      //  onBeforeMount(()=>{
+      //   console.log("onBeforeMount11");
+      // })
+      //  onMounted(()=>{
+      //   console.log("onMounted11");
+      // })
+      // onBeforeUpdate(()=>{
+      //   console.log("onBeforeUpdate11");
+      // })
+      return {
+        ...toRefs(state),
+        handleClick
+      }
+
+    },
+    render(){
+      return h("p",{onClick:this.handleClick},this.count)
+    }
+  }
+
+   render(h(VueComponent),app) 
+
 
   </script>
 

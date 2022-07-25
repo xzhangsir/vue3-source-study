@@ -36,6 +36,7 @@ export function ref(val){
 
 // 只是将.value属性代理到原始对象上
 class ObjectRefImpl{
+  public __v_isRef = true
   constructor(public object,public key){}
   get value(){
     return this.object[this.key]
@@ -57,7 +58,7 @@ export function toRefs(object){
   for(let key in object){
     result[key] = toRef(object,key)
   }
-
+  
   return result
 
 }
