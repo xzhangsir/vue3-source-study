@@ -13,7 +13,9 @@
   <script>
 
     let {createRenderer,h,render,reactive,Text,Fragment,
-        ref,toRefs,onBeforeMount,onMounted,onBeforeUpdate,onUpdated,getCurrentInstance} = VueRuntimeDOM
+        ref,toRefs,onBeforeMount,onMounted,onBeforeUpdate,onUpdated,getCurrentInstance,
+      createElementBlock:_createElementBlock,openBlock:_openBlock,
+      topDisplayString:_toDisplayString,createElementVNode:_createElementVNode} = VueRuntimeDOM
     // setup  可以返回 对象 和 函数
 
 
@@ -100,7 +102,7 @@
   //  生命周期
 
 
-  const useCounter = (count)=>{
+ /*  const useCounter = (count)=>{
     const state = reactive({count})
     const handleClick = ()=>{
       state.count++
@@ -142,6 +144,32 @@
       return h("p",{onClick:this.handleClick},this.count)
     }
   }
+
+   render(h(VueComponent),app)  */
+
+  // 靶向更新
+   const VueComponent = {
+    setup(){
+      const state = reactive({name:"zx",class:"abc"})
+
+      setTimeout(()=>{
+        state.name = "eee"
+        state.class = 'def'
+      },1000)
+
+      return {
+        state
+      }
+    },
+    render(_ctx){
+      let vnode = (_openBlock(),_createElementBlock("div",null,[
+        _createElementVNode("h1",null,"hello"),
+        _createElementVNode("span",{class:_ctx.state.class},_toDisplayString(_ctx.state.name),1 /*TEXT*/),
+      ]))
+      console.log(vnode)
+      return vnode
+    }
+   }
 
    render(h(VueComponent),app) 
 
