@@ -55,3 +55,8 @@ pnpm tsc --init   // typescript 配置文件生成 tsconfig.json
 - 运行时（runtime-core）  核心（不依赖平台  不论是 浏览器 小程序APP canvas）  主要靠 虚拟dom  
 - 针对不同平台的运行时(runtime-dom)  Vue就是针对浏览器平台的
 - 渲染器 createRenderer
+
+
+
+
+https://vue-next-template-explorer.netlify.app/
