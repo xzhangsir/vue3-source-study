@@ -13,9 +13,11 @@
     // 解析规则就是一个个字符进行判断 并且解析完了就删除
    let {compile} =  VueCompilerCore
 
-   let r = compile(`a
+  /*  let r = compile(`a
    
-   bc<a></a>{{abc}}`)
+   bc<a></a>{{abc}}`) */
+
+    let r = compile(`<div class = "red" ></div>`)
 
    console.log(r)
   </script>
