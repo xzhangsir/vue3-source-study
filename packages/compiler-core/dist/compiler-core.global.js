@@ -172,7 +172,7 @@ var VueCompilerCore = (() => {
   function parseAttributes(context) {
     const props = [];
     const source = context.source;
-    while (source.length > 0 && !(source.startsWith(">") || source.startsWith("/>"))) {
+    while (context.source.length > 0 && !(context.source.startsWith(">") || context.source.startsWith("/>"))) {
       const prop = parseAttribute(context);
       props.push(prop);
       advanceBySpaces(context);
@@ -207,9 +207,17 @@ var VueCompilerCore = (() => {
     ele.children = children;
     return ele;
   }
+  function createRoot(children, loc) {
+    return {
+      type: 0 /* ROOT */,
+      children,
+      loc
+    };
+  }
   function parse(template) {
     const context = createParserContext(template);
-    return parseChildren(context);
+    const start = getCursor(context);
+    return createRoot(parseChildren(context), getSelection(context, start));
   }
   function parseChildren(context) {
     const nodes = [];

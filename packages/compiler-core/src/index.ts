@@ -151,8 +151,9 @@ function parseAttributeValue(context){
 function parseAttribute(context){
   const start = getCursor(context)
 
+  
   // 属性的名字
-  const match = /^[^\t\r\n\f />][^\t\r\n\f />=]*/.exec(context.source)
+  const match = /^[^\t\r\n\f />][^\t\r\n\f />=]*/.exec(context.source) 
   let name = match[0]
   advanceBy(context,name.length)
   advanceBySpaces(context) //删空格
@@ -176,7 +177,7 @@ function parseAttribute(context){
 function parseAttributes(context){
   const props = []
   const source = context.source
-  while(source.length > 0 && !(source.startsWith('>') || source.startsWith('/>'))){
+  while(context.source.length > 0 && !(context.source.startsWith('>') || context.source.startsWith('/>'))){
     const prop = parseAttribute(context)
     props.push(prop)
     advanceBySpaces(context)
@@ -224,12 +225,21 @@ function parseElement(context){
   return ele
 }
 
+function createRoot(children,loc){
+  return {
+    type:NodeTypes.ROOT,  //Fragment
+    children,
+    loc
+  }
+}
+
 function parse(template){
   // 创建一个解析的上下文 
   const context = createParserContext(template)
 
-  return parseChildren(context)
-  
+  const start = getCursor(context)
+
+  return  createRoot(parseChildren(context),getSelection(context,start))  
 }
 
 function parseChildren(context){
@@ -250,8 +260,13 @@ function parseChildren(context){
     if(!node){
       node = parseText(context)
     }
-    nodes.push(node)
+
+    // if(!(node.type === NodeTypes.TEXT && !/[^\t\r\n\f ]/.test(node.content))){
+      // 如果没有上面的判断  `<div></div> ` 会解析为两个node 有一个空格
+      nodes.push(node)
+    // }
   }
+
   return nodes
 }
 
