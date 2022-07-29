@@ -36,6 +36,8 @@ var VueCompilerCore = (() => {
   __export(src_exports, {
     compile: () => compile
   });
+
+  // packages/compiler-core/src/parse.ts
   function createParserContext(template) {
     return {
       line: 1,
@@ -122,7 +124,7 @@ var VueCompilerCore = (() => {
     advanceBy(context, 2);
     return {
       type: 5 /* INTERPOLATION */,
-      context: {
+      content: {
         type: 4 /* SIMPLE_EXPRESSION */,
         content,
         loc: getSelection(context, innerStart, innerEnd)
@@ -236,9 +238,97 @@ var VueCompilerCore = (() => {
     }
     return nodes;
   }
+
+  // packages/compiler-core/src/runtimeHelpers.ts
+  var TO_DISPLAY_STRING = Symbol("toDisplayString");
+  var helperMap = {
+    [TO_DISPLAY_STRING]: "toDisplayString"
+  };
+
+  // packages/compiler-core/src/transforms/transformElement.ts
+  function transformElement(node, context) {
+    if (node.type === 1 /* ELEMENT */) {
+      return () => {
+        console.log("\u9000\u51FA1");
+      };
+    }
+  }
+
+  // packages/compiler-core/src/transforms/transformExpression.ts
+  function transformExpression(node, context) {
+    if (node.type === 5 /* INTERPOLATION */) {
+      let content = node.content.content;
+      node.content.content == "__ctx" + content;
+    }
+  }
+
+  // packages/compiler-core/src/transforms/transformText.ts
+  function transformText(node, context) {
+    if (node.type === 1 /* ELEMENT */ || node.type === 0 /* ROOT */) {
+      return () => {
+        console.log("\u9000\u51FA2");
+      };
+    }
+  }
+
+  // packages/compiler-core/src/transforms.ts
+  function createTransformContext(root) {
+    const context = {
+      currentNode: root,
+      parent: null,
+      helpers: /* @__PURE__ */ new Map(),
+      helper(name) {
+        const count = context.helpers.get(name) || 0;
+        context.helpers.set(name, count + 1);
+        return name;
+      },
+      nodeTransforms: [
+        transformElement,
+        transformText,
+        transformExpression
+      ]
+    };
+    return context;
+  }
+  function traverse(node, context) {
+    context.currentNode = node;
+    const transforms = context.nodeTransforms;
+    const exitsFns = [];
+    for (let i2 = 0; i2 < transforms.length; i2++) {
+      let onExit = transforms[i2](node, context);
+      onExit && exitsFns.push(onExit);
+      if (!context.currentNode)
+        return;
+    }
+    switch (node.type) {
+      case 5 /* INTERPOLATION */:
+        context.helper(TO_DISPLAY_STRING);
+        break;
+      case 1 /* ELEMENT */:
+      case 0 /* ROOT */:
+        for (let i2 = 0; i2 < node.children.length; i2++) {
+          context.parent = node;
+          traverse(node.children[i2], context);
+        }
+        break;
+    }
+    context.currentNode = node;
+    let i = exitsFns.length;
+    while (i--) {
+      exitsFns[i]();
+    }
+  }
+  function transform(ast) {
+    console.log(ast);
+    const context = createTransformContext(ast);
+    console.log(context);
+    traverse(ast, context);
+  }
+
+  // packages/compiler-core/src/index.ts
   function compile(template) {
     const ast = parse(template);
-    return ast;
+    transform(ast);
   }
   return __toCommonJS(src_exports);
 })();
