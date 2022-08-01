@@ -1,5 +1,5 @@
-import { NodeTypes } from "./ast"
-import { TO_DISPLAY_STRING } from "./runtimeHelpers";
+import { createVnodeCall, NodeTypes } from "./ast"
+import { CREATE_ELEMENT_BLOCK, CREATE_ELEMENT_VNODE, FRAGMENT, OPEN_BLOCK, TO_DISPLAY_STRING } from "./runtimeHelpers";
 import { transformElement } from "./transforms/transformElement"
 import { transformExpression } from "./transforms/transformExpression"
 import { transformText } from "./transforms/transformText"
@@ -14,6 +14,17 @@ function createTransformContext(root){
       const count = context.helpers.get(name) || 0
       context.helpers.set(name,count + 1) 
       return name
+    },
+    removeHelper(name){
+      const count = context.helpers.get(name)
+      if(count){
+        const currentCount = count - 1
+        if(!currentCount){
+          context.helpers.delete(name)
+        }else{
+          context.helpers.set(name,currentCount)
+        }
+      }
     },
     nodeTransforms:[
       transformElement,
@@ -55,12 +66,39 @@ function traverse(node,context){
     }
 }
 
+function createRootCodegen(ast,context){
+  let {children} = ast
+  if(children.length === 1){
+    const child = children[0]
+    if(child.type === NodeTypes.ELEMENT && child.codegenNode){
+      ast.codegenNode = child.codegenNode
+      context.removeHelper(CREATE_ELEMENT_VNODE)
+      context.helper(OPEN_BLOCK)
+      context.helper(CREATE_ELEMENT_BLOCK)
+      ast.codegenNode.isBlock = true 
+    }else{
+      ast.codegenNode = child.codegenNode
+    }
+  }else{
+    ast.codegenNode = createVnodeCall(context,context.helper(FRAGMENT),null,ast.children)
+    context.helper(OPEN_BLOCK)
+    context.helper(CREATE_ELEMENT_BLOCK)
+    ast.codegenNode.isBlock = true 
+  }
+}
+
 export function transform(ast){
   // 对tree进行遍历
-  console.log(ast);
+  // console.log(ast);
   
   const context = createTransformContext(ast)
-  console.log(context);
+  // console.log(context);
   traverse(ast,context)
+
+  createRootCodegen(ast,context)
+
+
+  // 更具转化的ast生成代码
+
   
 }
