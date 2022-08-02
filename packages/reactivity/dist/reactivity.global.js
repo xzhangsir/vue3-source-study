@@ -20,6 +20,7 @@ var VueReactivity = (() => {
   // packages/reactivity/src/index.ts
   var src_exports = {};
   __export(src_exports, {
+    ReactiveEffect: () => ReactiveEffect,
     computed: () => computed,
     effect: () => effect,
     proxyRefs: () => proxyRefs,
@@ -274,6 +275,7 @@ var VueReactivity = (() => {
     constructor(object, key) {
       this.object = object;
       this.key = key;
+      this.__v_isRef = true;
     }
     get value() {
       return this.object[this.key];

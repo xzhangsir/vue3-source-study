@@ -41,15 +41,15 @@ var VueCompilerCore = (() => {
   var TO_DISPLAY_STRING = Symbol("toDisplayString");
   var CREATE_TEXT = Symbol("createTextVnode");
   var CREATE_ELEMENT_VNODE = Symbol("createElementVnode");
-  var OPEN_BLOCK = Symbol("open_block");
-  var CREATE_ELEMENT_BLOCK = Symbol("create_element_block");
+  var OPEN_BLOCK = Symbol("openBlock");
+  var CREATE_ELEMENT_BLOCK = Symbol("createElementBlock");
   var FRAGMENT = Symbol("fragment");
   var helperMap = {
     [TO_DISPLAY_STRING]: "toDisplayString",
     [CREATE_TEXT]: "createTextVnode",
     [CREATE_ELEMENT_VNODE]: "createElementVnode",
-    [OPEN_BLOCK]: "open_block",
-    [CREATE_ELEMENT_BLOCK]: "create_element_block",
+    [OPEN_BLOCK]: "openBlock",
+    [CREATE_ELEMENT_BLOCK]: "createElementBlock",
     [FRAGMENT]: "fragment"
   };
 
@@ -441,9 +441,11 @@ var VueCompilerCore = (() => {
         context.helper(CREATE_ELEMENT_BLOCK);
         ast.codegenNode.isBlock = true;
       } else {
-        ast.codegenNode = child.codegenNode;
+        ast.codegenNode = child;
       }
     } else {
+      if (children.length == 0)
+        return;
       ast.codegenNode = createVnodeCall(context, context.helper(FRAGMENT), null, ast.children);
       context.helper(OPEN_BLOCK);
       context.helper(CREATE_ELEMENT_BLOCK);
@@ -454,12 +456,95 @@ var VueCompilerCore = (() => {
     const context = createTransformContext(ast);
     traverse(ast, context);
     createRootCodegen(ast, context);
+    ast.helpers = [...context.helpers.keys()];
+  }
+
+  // packages/compiler-core/src/genderate.ts
+  function createCodeContext(ast) {
+    const context = {
+      code: "",
+      helper(name) {
+        return `${helperMap[name]}`;
+      },
+      push(code) {
+        context.code += code;
+      },
+      indentLevel: 0,
+      indent() {
+        ++context.indentLevel;
+        context.newline();
+      },
+      deindent(whithoutNewLine = false) {
+        --context.indentLevel;
+        if (!whithoutNewLine) {
+          context.newline();
+        }
+      },
+      newline() {
+        newline(context.indentLevel);
+      }
+    };
+    function newline(n) {
+      context.push("\n" + "  ".repeat(n));
+    }
+    return context;
+  }
+  function getFunctionPreable(ast, context) {
+    if (ast.helpers.length > 0) {
+      context.push(`import {${ast.helpers.map((h) => `${context.helper(h)} as _${context.helper(h)}`).join(",")}} from "vue"`);
+      context.newline();
+    }
+    context.push("export ");
+  }
+  function genText(node, context) {
+    context.push(JSON.stringify(node.content));
+  }
+  function genInterpolation(node, context) {
+    context.push(`_${helperMap[TO_DISPLAY_STRING]}(`);
+    genNode(node.content, context);
+    context.push(")");
+  }
+  function genExpression(node, context) {
+    context.push(node.content);
+  }
+  function genNode(node, context) {
+    switch (node.type) {
+      case 2 /* TEXT */:
+        genText(node, context);
+        break;
+      case 5 /* INTERPOLATION */:
+        genInterpolation(node, context);
+        break;
+      case 4 /* SIMPLE_EXPRESSION */:
+        genExpression(node, context);
+        break;
+    }
+  }
+  function genderate(ast) {
+    const context = createCodeContext(ast);
+    const { push, indent, deindent } = context;
+    getFunctionPreable(ast, context);
+    const functionName = "render";
+    const args = ["_ctx", "_cache", "$props"];
+    push(`function ${functionName}(${args.join(",")}){`);
+    indent();
+    push(`return `);
+    console.log(ast.codegenNode);
+    if (ast.codegenNode) {
+      genNode(ast.codegenNode, context);
+    } else {
+      push("null");
+    }
+    deindent();
+    push("}");
+    console.log(context.code);
   }
 
   // packages/compiler-core/src/index.ts
   function compile(template) {
     const ast = parse(template);
     transform(ast);
+    return genderate(ast);
   }
   return __toCommonJS(src_exports);
 })();

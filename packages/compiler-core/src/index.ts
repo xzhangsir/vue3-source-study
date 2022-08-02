@@ -1,5 +1,6 @@
 import { parse } from "./parse"
 import { transform } from "./transforms"
+import {genderate} from "./genderate"
 
 export function compile(template){
   // 三部曲： 解析  转化  生成
@@ -13,5 +14,5 @@ export function compile(template){
   transform(ast)
 
   
-  // return genderate(ast)  //最终生成代码
+  return genderate(ast)  //最终生成代码
 }
