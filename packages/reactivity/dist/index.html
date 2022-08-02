@@ -5,8 +5,8 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Document</title>
-  <script src = "./reactivity.global.js"></script>
-  <!-- <script src = "../../../node_modules/@vue/reactivity/dist/reactivity.global.js"></script> -->
+  <!-- <script src = "./reactivity.global.js"></script> -->
+  <script src = "../../../node_modules/@vue/reactivity/dist/reactivity.global.js"></script>
   <!-- <script src = "../../../node_modules/vue/dist/vue.global.js"></script> -->
 
 </head>
@@ -148,7 +148,7 @@
  */
 
 
- const {ref,effect,reactive,toRefs,proxyRefs} = VueReactivity
+ const {ref,effect,reactive,toRefs,proxyRefs,effectScope} = VueReactivity
 /* 
 //  const flag = ref(false)
 const user = reactive({
@@ -183,6 +183,58 @@ let {name,age} = toRefs(user)
   user.age = 12
  },1000)
  */
+
+/* 
+ const state = reactive({
+  name:"zx"
+ })
+
+ let runner1 = effect(()=>{
+  console.log("1",state.name);
+ })
+ let runner2 = effect(()=>{
+  console.log("2",state.name);
+ })
+ runner1.effect.stop()
+ runner2.effect.stop()
+ setTimeout(()=>{
+  state.name = 'jw'
+ },1000)
+ */
+
+ 
+ const state = reactive({
+  name:"zx"
+ })
+ let scope = effectScope()
+
+//  scope.run(()=>{
+//   effect(()=>{
+//     console.log("1",state.name);
+//   })
+//   effect(()=>{
+//     console.log("2",state.name);
+//   })
+//  })
+//  scope.stop()
+
+ scope.run(()=>{
+  effect(()=>{
+    console.log("1",state.name);
+  })
+  const innerScope = effectScope(true)
+  // true代表是这个scope是独立的 父级管不了
+  innerScope.run(()=>{
+      effect(()=>{
+        console.log("2",state.name);
+      })
+  })
+ })
+ scope.stop()
+ 
+ setTimeout(()=>{
+  state.name = 'jw'
+ },1000)
 
 
 

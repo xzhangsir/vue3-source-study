@@ -1,3 +1,5 @@
+import { recordEffectScope } from "./effectScope"
+
 export let activeEffect = undefined //当前正在执行的effect是谁
 
 function cleanupEffect(effect){
@@ -19,7 +21,9 @@ export class ReactiveEffect{
   public active = true // 这个effect默认是激活的状态
   //用户传递的参数也会在当前this上  类似 this.fn = fn
   // scheduler  用户自定义调度器
-  constructor(public fn,public scheduler?){}
+  constructor(public fn,public scheduler?){
+    recordEffectScope(this)
+  }
   // run  就是执行effect
   run(){
     // 如果当前的effect是非激活的状态
