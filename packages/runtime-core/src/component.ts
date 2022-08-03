@@ -4,7 +4,7 @@ import { initProps } from "./componentProps"
 
 export let currentInstance = null
 
-export const setCurrentInstance = (instance)=>{
+export const setCurrentInstance = (instance)=>{ 
   currentInstance = instance
 }
 
@@ -12,9 +12,11 @@ export const getCurrentInstance = ()=>{
    return currentInstance
 }
 
-export function createComponentInstance(vnode){
+export function createComponentInstance(vnode,parent){
   // 组件的实例
   const instance = {
+    provides:parent ? parent.provides : Object.create(null), //所有组件用的都是父级的provides
+    parent,
     data:null,
     vnode, //v2中组件的虚拟节点叫$vnode 渲染的内容叫 _vnode
     subTree:null, //V3中组件的虚拟节点叫vnode 渲染的节点叫subTree

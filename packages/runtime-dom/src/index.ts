@@ -11,6 +11,7 @@ const renderOptions =  Object.assign(nodeOps,{patchProp})
 
 // container  虚拟dom挂载到哪个容器上
 export function render(vnode,container){
+  
   createRenderer(renderOptions).render(vnode,container)
   
 }

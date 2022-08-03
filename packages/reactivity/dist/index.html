@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Document</title>
   <!-- <script src = "./reactivity.global.js"></script> -->
-  <script src = "../../../node_modules/@vue/reactivity/dist/reactivity.global.js"></script>
+  <!-- <script src = "../../../node_modules/@vue/reactivity/dist/reactivity.global.js"></script> -->
   <!-- <script src = "../../../node_modules/vue/dist/vue.global.js"></script> -->
 
 </head>
@@ -148,7 +148,7 @@
  */
 
 
- const {ref,effect,reactive,toRefs,proxyRefs,effectScope} = VueReactivity
+//  const {ref,effect,reactive,toRefs,proxyRefs,effectScope} = VueReactivity
 /* 
 //  const flag = ref(false)
 const user = reactive({
@@ -203,10 +203,10 @@ let {name,age} = toRefs(user)
  */
 
  
- const state = reactive({
-  name:"zx"
- })
- let scope = effectScope()
+//  const state = reactive({
+//   name:"zx"
+//  })
+//  let scope = effectScope()
 
 //  scope.run(()=>{
 //   effect(()=>{
@@ -218,7 +218,7 @@ let {name,age} = toRefs(user)
 //  })
 //  scope.stop()
 
- scope.run(()=>{
+/*  scope.run(()=>{
   effect(()=>{
     console.log("1",state.name);
   })
@@ -235,8 +235,7 @@ let {name,age} = toRefs(user)
  setTimeout(()=>{
   state.name = 'jw'
  },1000)
-
-
+ */
 
 
 
