@@ -16,7 +16,7 @@
 
   <script>
 // 
-    const {ref,createRenderer,reactive,h,render,Text,Fragment,getCurrentInstance,provide,inject,Teleport} = VueRuntimeDOM
+    const {ref,createRenderer,reactive,h,render,Text,Fragment,getCurrentInstance,provide,inject,Teleport,defineAsyncComponent} = VueRuntimeDOM
 
     // 渲染器渲染的是虚拟dom
     // let renderer = createRenderer({
@@ -182,9 +182,9 @@ const VueComponent = {
 render(h(VueComponent),app) */
 
 
-// teleport
+// teleport  传送门
 
-const VueComponent = {
+/* const VueComponent = {
   setup(){
     const flag = ref(true)
     const handleClick = ()=>{
@@ -201,7 +201,51 @@ const VueComponent = {
 }
 
 
-render(h(VueComponent),app) 
+render(h(VueComponent),app)  */
+
+
+// async  component  异步组件
+// 异步组件就是刚开始渲染一个空组件  组件加载之后 渲染一个真的组件
+
+// 对象(loading 或者 error)和函数两种写法
+const My = {
+  render:()=>h('h1','aaaa')
+}
+/*  let asyncComponent = defineAsyncComponent(()=>{
+  return new Promise((resolve,reject)=>{
+    setTimeout(()=>{
+      resolve(My)
+    },2000)
+  })
+ }) */
+
+ const ErrorComponent = {
+  render:()=>h('del','aaaa')
+ }
+ const LoadingCom = {
+  render:()=>h('i','loading...')
+ }
+ 
+  let asyncComponent = defineAsyncComponent({
+    loader:()=>{
+      return new Promise((resolve,reject)=>{
+        setTimeout(()=>{
+          reject(My)
+        },3000)
+      })
+    },
+    timeout:2000,
+    delay:1000,
+    LoadingComponent:LoadingCom,
+    errorComponent:ErrorComponent,
+    onError(err,retry,fail){
+      console.log("加载失败，重新加载");
+      retry()
+    }
+    
+  })
+
+ render(h(asyncComponent),app)
 
 
 

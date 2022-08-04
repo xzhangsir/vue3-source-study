@@ -20,7 +20,7 @@ import { createVnode, isVnode } from "./vnode"
 // 
 
 
-export function h(type,propsChildren,children){
+export function h(type,propsChildren?,children?){
 
   const l = arguments.length
 
