@@ -1,6 +1,6 @@
 import { ReactiveEffect } from "@vue/reactivity"
 import { invokeArrayFns, isNumber, isString, PatchFlags, ShapeFlags } from "@vue/shared"
-import { createComponentInstance, setupComponent } from "./component"
+import { createComponentInstance, renderComponent, setupComponent } from "./component"
 import { hasPropsChanged, updateProps } from "./componentProps"
 import {queueJob} from './scheduler'
 import { createVnode,Text,isSameVnode, Fragment } from "./vnode"
@@ -527,8 +527,10 @@ export function createRenderer(renderOptions){
     updateProps(instance.props,next.props)
   }
 
+
+
   const setupRenderEffect = (instance,container,anchor)=>{
-    const {render} = instance
+    const {render,vnode} = instance
     const componentUpdateFn = ()=>{
       // 区分是初始化 还是要更新
       if(!instance.isMounted){ //初始化
@@ -539,7 +541,9 @@ export function createRenderer(renderOptions){
         }
 
         // const subTree = render.call(state)
-        const subTree = render.call(instance.proxy,instance.proxy)
+        // const subTree = render.call(instance.proxy,instance.proxy)
+
+        const subTree = renderComponent(instance)
 
         // 创造了subtree的真实节点 并插入了
         patch(null,subTree,container,anchor,instance)
@@ -565,7 +569,8 @@ export function createRenderer(renderOptions){
         }
 
         // const subTree = render.call(state)
-        const subTree = render.call(instance.proxy,instance.proxy)
+        // const subTree = render.call(instance.proxy,instance.proxy)
+        const subTree = renderComponent(instance)
         patch(instance.subTree,subTree,container,anchor,instance)
         instance.subTree = subTree
 
