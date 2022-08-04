@@ -11,9 +11,12 @@
 </head>
 <body>
   <div id="app"></div>
+  <div id="root"></div>
+  <div id="root2"></div>
+
   <script>
 // 
-    const {createRenderer,reactive,h,render,Text,Fragment,getCurrentInstance,provide,inject} = VueRuntimeDOM
+    const {ref,createRenderer,reactive,h,render,Text,Fragment,getCurrentInstance,provide,inject,Teleport} = VueRuntimeDOM
 
     // 渲染器渲染的是虚拟dom
     // let renderer = createRenderer({
@@ -140,7 +143,7 @@
 // 在渲染子组件的时候  子会将父的provide放到自己身上
 //  const {ref,effect,reactive,toRefs,proxyRefs,effectScope,h,render,provide,inject,getCurrentInstance} = Vue
 
-
+/* 
 const My = {
   name:"child",
   setup(){
@@ -176,7 +179,30 @@ const VueComponent = {
   }
 }
 
-render(h(VueComponent),app)
+render(h(VueComponent),app) */
+
+
+// teleport
+
+const VueComponent = {
+  setup(){
+    const flag = ref(true)
+    const handleClick = ()=>{
+      flag.value = false
+    }
+    return {
+      flag,
+      handleClick
+    }
+  },
+  render(){
+    return h('button',{onClick: this.handleClick},this.flag ? h(Teleport,{to:'#root'},[h(Text,345)]) : h(Teleport,{to:'#root2'},[h(Text,123)]))
+  }
+}
+
+
+render(h(VueComponent),app) 
+
 
 
   </script>

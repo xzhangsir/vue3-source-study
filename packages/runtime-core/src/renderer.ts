@@ -643,7 +643,6 @@ export function createRenderer(renderOptions){
 
 
     const {type,shapeFlag} = newN
-
     switch(type){
       case Text:
           processText(oldN,newN,container)
@@ -656,6 +655,14 @@ export function createRenderer(renderOptions){
           processElement(oldN,newN,container,anchor,parentComponent)
         }else if(shapeFlag & ShapeFlags.COMPONENT){
           processComponent(oldN,newN,container,anchor,parentComponent)
+        }else if(shapeFlag & ShapeFlags.TELEPORT){
+          type.process(oldN,newN,container,anchor,{
+            mountChildren,
+            patchChildren,
+            move(vnode,container){
+              hostInsert(vnode.component ? vnode.component.subTree.el : vnode.el,container)
+            }
+          })
         }
     }
   }
