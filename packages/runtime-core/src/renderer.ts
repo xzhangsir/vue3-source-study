@@ -2,6 +2,7 @@ import { ReactiveEffect } from "@vue/reactivity"
 import { invokeArrayFns, isNumber, isString, PatchFlags, ShapeFlags } from "@vue/shared"
 import { createComponentInstance, renderComponent, setupComponent } from "./component"
 import { hasPropsChanged, updateProps } from "./componentProps"
+import { isKeepAlive } from "./components/KeepAlive"
 import {queueJob} from './scheduler'
 import { createVnode,Text,isSameVnode, Fragment } from "./vnode"
 
@@ -510,6 +511,15 @@ export function createRenderer(renderOptions){
     // 1 ) 要创造一个组价的实例
     let instance =  vnode.component = createComponentInstance(vnode,parentComponent)
 
+    if(isKeepAlive(vnode)){
+      (instance.ctx as any).renderer = {
+        createElement : hostCreateElement,
+        move(vnode,container){
+          hostInsert(vnode.component.subTree.el,container)
+        }
+      }
+    }
+
     // 2 ) 给实例上赋值
     setupComponent(instance)
 
@@ -525,6 +535,8 @@ export function createRenderer(renderOptions){
     instance.next = null
     instance.vnode = next //实例上最新的虚拟节点
     updateProps(instance.props,next.props)
+    Object.assign(instance.slots,next.children)//更新插槽
+
   }
 
 
@@ -548,14 +560,17 @@ export function createRenderer(renderOptions){
         // 创造了subtree的真实节点 并插入了
         patch(null,subTree,container,anchor,instance)
 
-        if(m){
-          invokeArrayFns(m)
-        }
-
+    
 
         instance.subTree = subTree
 
         instance.isMounted = true
+
+        if(m){
+          // 一定要等到subTree已经有了 再去调用mounted
+          invokeArrayFns(m)
+        }
+
       }else{
         // 组件内部更新
         let {next,bu,u} = instance
@@ -573,7 +588,8 @@ export function createRenderer(renderOptions){
         const subTree = renderComponent(instance)
         patch(instance.subTree,subTree,container,anchor,instance)
         instance.subTree = subTree
-
+        console.log(subTree);
+        
          if(u){
           invokeArrayFns(u)
         }
@@ -593,11 +609,13 @@ export function createRenderer(renderOptions){
     const {props:prevProps,children:prevChildren} = n1
     const {props:nextProps,children:nextChildren} = n2
 
-    if(prevProps === nextProps) return false
-
+    
     if(prevChildren || nextChildren){
       return true
     }
+
+    if(prevProps === nextProps) return false
+
 
     return hasPropsChanged(prevProps,nextProps)
   }

@@ -15,6 +15,7 @@ export const getCurrentInstance = ()=>{
 export function createComponentInstance(vnode,parent){
   // 组件的实例
   const instance = {
+    ctx:{},  // 实例的上下文
     provides:parent ? parent.provides : Object.create(null), //所有组件用的都是父级的provides
     parent,
     data:null,
