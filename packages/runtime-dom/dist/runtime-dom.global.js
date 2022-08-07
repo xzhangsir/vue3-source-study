@@ -661,20 +661,50 @@ var VueRuntimeDOM = (() => {
   var onUpdated = createHook("u" /* UPDATED */);
 
   // packages/runtime-core/src/components/KeepAlive.ts
+  function resetShapeFlag(vnode) {
+    let shapeFlag = vnode.shapeFlag;
+    if (shapeFlag & 256 /* COMPONENT_SHOULD_KEEP_ALIVE */) {
+      shapeFlag -= 256 /* COMPONENT_SHOULD_KEEP_ALIVE */;
+    }
+    if (shapeFlag & 512 /* COMPONENT_KEPT_ALIVE */) {
+      shapeFlag -= 512 /* COMPONENT_KEPT_ALIVE */;
+    }
+    vnode.shapeFlag = shapeFlag;
+  }
   var KeepAliveImpl = {
     __isKeepAlive: true,
+    props: {
+      include: {},
+      exclude: {},
+      max: {}
+    },
     setup(props, { slots }) {
       const Keys = /* @__PURE__ */ new Set();
       const cache = /* @__PURE__ */ new Map();
       const instance = getCurrentInstance();
       const { createElement, move } = instance.ctx.renderer;
       const storageContainer = createElement("div");
+      instance.ctx.deactivate = function(vnode) {
+        move(vnode, storageContainer);
+      };
+      instance.ctx.active = function(vnode, container, anchor) {
+        move(vnode, container, anchor);
+      };
       let pendingCacheKey = null;
-      onMounted(() => {
+      function cacheSubTree() {
         if (pendingCacheKey) {
           cache.set(pendingCacheKey, instance.subTree);
         }
-      });
+      }
+      onMounted(cacheSubTree);
+      onUpdated(cacheSubTree);
+      const { include, exclude, max } = props;
+      let currentVNode = null;
+      function pruneCacheEntry(key) {
+        resetShapeFlag(currentVNode);
+        cache.delete(key);
+        Keys.delete(key);
+      }
       return () => {
         let vnode = slots.default();
         if (!isVnode(vnode) || !(vnode.shapeFlag & 4 /* STATEFUL_COMPONENT */)) {
@@ -682,12 +712,25 @@ var VueRuntimeDOM = (() => {
         }
         const comp = vnode.type;
         const key = vnode.key == null ? comp : vnode.key;
+        let name = comp.name;
+        if (name && (include && !include.split(",").includes(name)) || exclude && exclude.split(",").includes(name)) {
+          return vnode;
+        }
         let cacheVnode = cache.get(key);
         if (cacheVnode) {
+          vnode.component = cacheVnode.component;
+          vnode.shapeFlag |= 512 /* COMPONENT_KEPT_ALIVE */;
+          Keys.delete(key);
+          Keys.add(key);
         } else {
           Keys.add(key);
           pendingCacheKey = key;
+          if (max && max < Keys.size) {
+            pruneCacheEntry(Keys.values().next().value);
+          }
         }
+        vnode.shapeFlag |= 256 /* COMPONENT_SHOULD_KEEP_ALIVE */;
+        currentVNode = vnode;
         return vnode;
       };
     }
@@ -780,12 +823,12 @@ var VueRuntimeDOM = (() => {
         }
       }
     };
-    const unmountChildren = (children) => {
+    const unmountChildren = (children, parentComponent) => {
       for (let i = 0; i < children.length; i++) {
-        unmount(children[i]);
+        unmount(children[i], parentComponent);
       }
     };
-    const patchKeyChildren = (c1, c2, el) => {
+    const patchKeyChildren = (c1, c2, el, parentComponent) => {
       let i = 0;
       let e1 = c1.length - 1;
       let e2 = c2.length - 1;
@@ -822,7 +865,7 @@ var VueRuntimeDOM = (() => {
       } else if (i > e2) {
         if (i <= e1) {
           while (i <= e1) {
-            unmount(c1[i]);
+            unmount(c1[i], parentComponent);
             i++;
           }
         }
@@ -839,7 +882,7 @@ var VueRuntimeDOM = (() => {
         const oldChild = c1[i2];
         let newIndex = keyToNewIndexMap.get(oldChild.key);
         if (newIndex === void 0) {
-          unmount(oldChild);
+          unmount(oldChild, parentComponent);
         } else {
           newIndexToOldIndexArr[newIndex - s2] = i2 + 1;
           patch(oldChild, c2[newIndex], el);
@@ -909,14 +952,14 @@ var VueRuntimeDOM = (() => {
       const activeShapeFlag = newN.shapeFlag;
       if (activeShapeFlag & 8 /* TEXT_CHILDREN */) {
         if (prevShapeFlag & 16 /* ARRAY_CHILDREN */) {
-          unmountChildren(c1);
+          unmountChildren(c1, parentComponent);
         }
         if (c1 !== c2) {
           hostSetElementText(el, c2);
         }
       } else if (activeShapeFlag & 16 /* ARRAY_CHILDREN */) {
         if (prevShapeFlag & 16 /* ARRAY_CHILDREN */) {
-          patchKeyChildren(c1, c2, el);
+          patchKeyChildren(c1, c2, el, parentComponent);
         } else if (prevShapeFlag & 8 /* TEXT_CHILDREN */) {
           hostSetElementText(el, "");
           mountChildren(el, c2, parentComponent);
@@ -1010,7 +1053,6 @@ var VueRuntimeDOM = (() => {
           const subTree = renderComponent(instance);
           patch(instance.subTree, subTree, container, anchor, instance);
           instance.subTree = subTree;
-          console.log(subTree);
           if (u) {
             invokeArrayFns(u);
           }
@@ -1039,7 +1081,11 @@ var VueRuntimeDOM = (() => {
     };
     const processComponent = (oldN, newN, container, anchor, parentComponent) => {
       if (oldN === null) {
-        mountComponent(newN, container, anchor, parentComponent);
+        if (newN.shapeFlag & 512 /* COMPONENT_KEPT_ALIVE */) {
+          parentComponent.ctx.active(newN, container, anchor);
+        } else {
+          mountComponent(newN, container, anchor, parentComponent);
+        }
       } else {
         updateComponent(oldN, newN);
       }
@@ -1048,7 +1094,7 @@ var VueRuntimeDOM = (() => {
       if (oldN === newN)
         return null;
       if (oldN && !isSameVnode(oldN, newN)) {
-        unmount(oldN);
+        unmount(oldN, parentComponent);
         oldN = null;
       }
       const { type, shapeFlag } = newN;
@@ -1075,18 +1121,20 @@ var VueRuntimeDOM = (() => {
           }
       }
     };
-    const unmount = (vnode) => {
+    const unmount = (vnode, parentComponent) => {
       if (vnode.type === Fragment) {
-        return unmountChildren(vnode);
+        return unmountChildren(vnode, parentComponent);
+      } else if (vnode.shapeFlag & 256 /* COMPONENT_SHOULD_KEEP_ALIVE */) {
+        return parentComponent.ctx.deactivate(vnode);
       } else if (vnode.shapeFlag & 6 /* COMPONENT */) {
-        return unmount(vnode.component.subTree);
+        return unmount(vnode.component.subTree, null);
       }
       hostRemove(vnode.el);
     };
     const render2 = (vnode, container) => {
       if (vnode == null) {
         if (container._vnode) {
-          unmount(container._vnode);
+          unmount(container._vnode, null);
         }
       } else {
         patch(container._vnode || null, vnode, container);
