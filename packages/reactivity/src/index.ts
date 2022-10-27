@@ -1,13 +1,3 @@
-// import {isObject} from "@vue/shared"
-// console.log(isObject({}))
+import { isObject } from "@vue/shared";
 
-export {effect,ReactiveEffect} from "./effect"
-export {reactive} from "./reactive"
-export {computed} from "./computed"
-export {watch} from "./watch"
-export {ref,toRefs,proxyRefs} from "./ref"
-export * from "./effectScope"
-
-
-
-
+console.log(isObject(123))

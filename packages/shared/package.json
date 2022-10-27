@@ -4,9 +4,9 @@
   "description": "",
   "main": "index.js",
   "buildOptions":{
-    "formats":[
-      "cjs",
-      "esm-bundler"
-    ]
+      "formats":[
+        "cjs",
+        "esm-bundler"
+      ]
   }
 }
