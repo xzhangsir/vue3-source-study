@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script src="./reactivity.global.js"></script>
+  <!-- <script src = "../../../node_modules/@vue/reactivity/dist/reactivity.global.js"></script> -->
+</head>
+
+<body>
+  <div id="app"></div>
+  <script>
+    // effect 代表的是副作用函数,如果次函数依赖的数据发生了变化，这个函数回重新执行
+    // reactive 将数据变为响应式 proxy
+    // shallowReactive 浅代理  只代理第一层
+    // readonly只读的
+    // shallowReadonly  浅层只读的 深层的可以改 但是不触发响应式
+    // const {effect,reactive,shallowReactive,readonly,shallowReadonly} = VueReactivity
+    const { effect, reactive, isReactive, readonly, isReadonly, shallowReactive, shallowReadonly ,stop} = VueReactivity
+
+    const state = reactive({
+      name: "zx",
+      age: 18,
+      sex: 1,
+      address: {
+        city: "中国"
+      }
+    })
+
+    const RState = readonly({
+      id: '123'
+    })
+
+    // 此effect函数默认先执行一次 
+    // 对响应式数据取值(取值的过程中数据会依赖于当前的effect)
+    let test = effect(() => {
+      console.log(state.age, state.name)
+      app.innerHTML = state.name + "今年" + state.age + "岁"
+    })
+    // stop(test)
+    effect(() => {
+      console.log(state.sex, state.address.city)
+    })
+
+    // console.log(isReadonly(RState))
+    // effect(() => {
+    //     console.log( state.age)
+    //   })
+
+    // name和age发生变化会重新执行effect函数
+    setTimeout(() => {
+      state.age = 23
+      // state.sex = 2
+      state.address.city = "zhongg"
+      console.log(state)
+    }, 1000)
+  </script>
+
+</body>
+
+</html>
