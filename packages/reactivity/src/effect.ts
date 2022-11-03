@@ -1,7 +1,7 @@
 export let activeEffect = undefined //当前正在执行的effect是谁
 let shouldTrack // 当前这个 实例需不需要 收集依赖
 
-class ReactiveEffect{
+export class ReactiveEffect{
   // 标记当前effect的父级是谁
   public parent = null;
   // 用户反向记录 effect 中依赖了那些属性

@@ -20,6 +20,7 @@ var VueReactivity = (() => {
   // packages/reactivity/src/index.ts
   var src_exports = {};
   __export(src_exports, {
+    computed: () => computed,
     effect: () => effect,
     isReactive: () => isReactive,
     isReadonly: () => isReadonly,
@@ -39,6 +40,9 @@ var VueReactivity = (() => {
   // packages/shared/src/index.ts
   var isObject = (val) => {
     return typeof val === "object" && val !== null;
+  };
+  var isFunction = (val) => {
+    return typeof val === "function";
   };
   var hasChanged = (value, oldValue) => !Object.is(value, oldValue);
   var isArray = Array.isArray;
@@ -299,6 +303,49 @@ var VueReactivity = (() => {
   }
   function toReactive(val) {
     return isObject(val) ? reactive(val) : val;
+  }
+
+  // packages/reactivity/src/computed.ts
+  var ComputedRefImpl = class {
+    constructor(getter, setter) {
+      this.setter = setter;
+      this._dirty = true;
+      this.__v_isReadonly = true;
+      this.__v_isRef = true;
+      this.dep = /* @__PURE__ */ new Set();
+      this._getter = getter;
+      this._effect = new ReactiveEffect(getter, () => {
+        if (!this._dirty) {
+          this._dirty = true;
+          triggerEffects(this.dep);
+        }
+      });
+    }
+    get value() {
+      this.dep.add(activeEffect);
+      if (this._dirty) {
+        this._dirty = false;
+        this._value = this._effect.run();
+      }
+      return this._value;
+    }
+    set value(newVal) {
+      this.setter(newVal);
+    }
+  };
+  function computed(getterOrOptions) {
+    let onlyGetter = isFunction(getterOrOptions);
+    let getter, setter;
+    if (onlyGetter) {
+      getter = getterOrOptions;
+      setter = () => {
+        console.warn("no set");
+      };
+    } else {
+      getter = getterOrOptions.get;
+      setter = getterOrOptions.set;
+    }
+    return new ComputedRefImpl(getter, setter);
   }
   return __toCommonJS(src_exports);
 })();

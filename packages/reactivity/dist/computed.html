@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script src="./reactivity.global.js"></script>
+  <!-- <script src = "../../../node_modules/@vue/reactivity/dist/reactivity.global.js"></script> -->
+</head>
+
+<body>
+  <div id="app"></div>
+  <script>
+      const { computed, effect, reactive, ref } = VueReactivity
+
+      const state = reactive({
+        firName: "zhang",
+        lastName: "xin",
+        age:12
+      })
+      const num = ref(1)
+      const numAdd = computed(() => num.value + 1)
+
+      console.log(numAdd.value) // 2
+      numAdd.value = 3 //no set
+      
+      const count = ref(1)
+      const plusOne = computed({
+        get: () => count.value + 1,
+        set: (val) => {
+          count.value = val - 1
+        }
+      })
+      console.log(plusOne.value) // 2
+      plusOne.value = 1
+      console.log(count.value) // 0
+
+  </script>
+
+</body>
+
+</html>
