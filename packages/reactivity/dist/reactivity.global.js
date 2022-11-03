@@ -23,17 +23,24 @@ var VueReactivity = (() => {
     effect: () => effect,
     isReactive: () => isReactive,
     isReadonly: () => isReadonly,
+    isRef: () => isRef,
+    proxyRefs: () => proxyRefs,
     reactive: () => reactive,
     readonly: () => readonly,
+    ref: () => ref,
     shallowReactive: () => shallowReactive,
     shallowReadonly: () => shallowReadonly,
-    stop: () => stop
+    stop: () => stop,
+    toRef: () => toRef,
+    toRefs: () => toRefs,
+    unRef: () => unRef
   });
 
   // packages/shared/src/index.ts
   var isObject = (val) => {
     return typeof val === "object" && val !== null;
   };
+  var hasChanged = (value, oldValue) => !Object.is(value, oldValue);
   var isArray = Array.isArray;
   var extend = Object.assign;
 
@@ -221,6 +228,77 @@ var VueReactivity = (() => {
   function shallowReadonly(target) {
     const proxy = new Proxy(target, shallowReadonlyHandlers);
     return proxy;
+  }
+
+  // packages/reactivity/src/ref.ts
+  var RefImpl = class {
+    constructor(val) {
+      this.__v_isRef = true;
+      this.dep = /* @__PURE__ */ new Set();
+      this._rawVal = val;
+      this._value = toReactive(val);
+    }
+    get value() {
+      if (!this.dep.has(activeEffect)) {
+        this.dep.add(activeEffect);
+      }
+      return this._value;
+    }
+    set value(newVal) {
+      if (!hasChanged(this._rawVal, newVal))
+        return;
+      this._rawVal = newVal;
+      this._value = toReactive(newVal);
+      triggerEffects(this.dep);
+    }
+  };
+  function ref(val) {
+    return new RefImpl(val);
+  }
+  function isRef(ref2) {
+    return !!ref2.__v_isRef;
+  }
+  function unRef(ref2) {
+    return isRef(ref2) ? ref2.value : ref2;
+  }
+  var ObjectRefImpl = class {
+    constructor(object, key) {
+      this.object = object;
+      this.key = key;
+    }
+    get value() {
+      return this.object[this.key];
+    }
+    set value(newVal) {
+      this.object[this.key] = newVal;
+    }
+  };
+  function toRef(reactive2, key) {
+    return new ObjectRefImpl(reactive2, key);
+  }
+  function toRefs(obj) {
+    const ret = isArray(obj) ? new Array(obj.length) : {};
+    for (const key in obj) {
+      ret[key] = toRef(obj, key);
+    }
+    return ret;
+  }
+  function proxyRefs(obj) {
+    return new Proxy(obj, {
+      get(target, key) {
+        return unRef(Reflect.get(target, key));
+      },
+      set(target, key, newVal) {
+        if (isRef(target[key]) && !isRef(newVal)) {
+          return target[key].value = newVal;
+        } else {
+          return Reflect.set(target, key, newVal);
+        }
+      }
+    });
+  }
+  function toReactive(val) {
+    return isObject(val) ? reactive(val) : val;
   }
   return __toCommonJS(src_exports);
 })();

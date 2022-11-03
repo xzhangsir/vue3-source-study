@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script src="./reactivity.global.js"></script>
+  <!-- <script src = "../../../node_modules/@vue/reactivity/dist/reactivity.global.js"></script> -->
+</head>
+
+<body>
+  <div id="app"></div>
+  <script>
+
+    const { effect,reactive,ref,isRef,isReactive, toRefs, proxyRefs } = VueReactivity
+
+    const num = ref(10)
+    const state = ref({
+      name:'zx'
+    })
+    const user = {
+      id:ref(99)
+    }
+
+    effect(()=>{
+      // console.log(state.value.name)
+      // console.log(user.id.value)
+    })
+    setTimeout(()=>{
+      // num.value = 12
+      // state.value.name = 'xm'
+      user.id.value = 89
+      
+    },1000)
+    // console.log(isRef(state))
+    // console.log(isRef(user.id))
+    
+    // console.log(num.value)
+
+
+    const obj = reactive({
+      price:100
+    })
+    const {price} = toRefs(obj)
+    price.value = 200
+    // console.log(price.value, obj)
+
+
+
+    const food = {
+      date:ref(2022),
+      city: "中国"
+    }
+    const proxyFood = proxyRefs(food)
+
+    console.log(food.date.value)
+    console.log(proxyFood.date, proxyFood.city)
+     // 设置 proxyFood.date 的值变成为 非ref的原始值
+    proxyFood.date = 2023
+     // food 的 date 仍然是ref对象，能够从 .value 获取到更新
+    console.log(food.date.value)
+    // 依旧能正常访问更新后的 date
+    console.log(proxyFood.date, proxyFood.city)
+     // 又给 proxyFood.date 设置成一个 ref对象
+    proxyFood.date = ref(2024)
+     // food 的 date 仍然是ref对象，能够从 .value 获取到更新
+    console.log(food.date.value)
+     // 依旧能正常访问更新后的 date
+    console.log(proxyFood.date, proxyFood.city)
+
+    
+  </script>
+
+</body>
+
+</html>

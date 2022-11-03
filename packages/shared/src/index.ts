@@ -11,5 +11,7 @@ export const isString = (val)=>{
 export const isNumber = (val)=>{
   return typeof val === 'number'
 }
+export const hasChanged = (value: any, oldValue: any): boolean =>
+  !Object.is(value, oldValue)
 export const isArray = Array.isArray
 export const extend = Object.assign
