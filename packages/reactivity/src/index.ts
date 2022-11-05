@@ -6,3 +6,6 @@ export { effect,stop } from "./effect"
 export * from "./ref"
 
 export { computed } from "./computed"
+
+export { watch } from "./watch"
+

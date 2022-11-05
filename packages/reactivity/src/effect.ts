@@ -9,8 +9,8 @@ export class ReactiveEffect{
   // 标记当前的effect 是否是激活状态
   public active = true
   public onStop?: () => void // onStop hooks
-  // schefuler 用户自定义调度器
-  constructor(public fn: any,public schefuler: any){}
+  // scheduler 用户自定义调度器
+  constructor(public fn: any,public scheduler: any){}
   run(){
     // 如果当前的effect是非激活的状态
     // 只执行传入的函数 

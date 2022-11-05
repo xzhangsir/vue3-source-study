@@ -34,7 +34,8 @@ var VueReactivity = (() => {
     stop: () => stop,
     toRef: () => toRef,
     toRefs: () => toRefs,
-    unRef: () => unRef
+    unRef: () => unRef,
+    watch: () => watch
   });
 
   // packages/shared/src/index.ts
@@ -52,9 +53,9 @@ var VueReactivity = (() => {
   var activeEffect = void 0;
   var shouldTrack;
   var ReactiveEffect = class {
-    constructor(fn, schefuler) {
+    constructor(fn, scheduler) {
       this.fn = fn;
-      this.schefuler = schefuler;
+      this.scheduler = scheduler;
       this.parent = null;
       this.deps = [];
       this.active = true;
@@ -346,6 +347,70 @@ var VueReactivity = (() => {
       setter = getterOrOptions.set;
     }
     return new ComputedRefImpl(getter, setter);
+  }
+
+  // packages/reactivity/src/watch.ts
+  function watch(source, cb, options) {
+    return doWatch(source, cb, options);
+  }
+  function doWatch(source, cb, { immediate, deep, flush, onTrack, onTrigger }) {
+    let getter;
+    if (isRef(source)) {
+      getter = source.value;
+    } else if (isReactive(source)) {
+      getter = () => source;
+      deep = true;
+    } else if (isArray(source)) {
+      getter = () => source.map((s) => {
+        if (isRef(s)) {
+          return s.value;
+        } else if (isReactive(s)) {
+          return traverse(s);
+        } else if (isFunction(s)) {
+          return s();
+        }
+      });
+    } else if (isFunction(source)) {
+      getter = () => source();
+    }
+    if (cb && deep) {
+      const baseGetter = getter;
+      getter = () => traverse(baseGetter());
+    }
+    let oldValue;
+    const job = () => {
+      let newValue = effect2.run();
+      cb(newValue, oldValue);
+      oldValue = newValue;
+    };
+    const scheduler = () => job();
+    const effect2 = new ReactiveEffect(getter, scheduler);
+    if (immediate) {
+      job();
+    } else {
+      oldValue = effect2.run();
+    }
+  }
+  function traverse(value, seen) {
+    if (!isObject(value)) {
+      return value;
+    }
+    seen = seen || /* @__PURE__ */ new Set();
+    if (seen.has(value)) {
+      return value;
+    }
+    seen.add(value);
+    if (isRef(value)) {
+    } else if (Array.isArray(value)) {
+      for (let i = 0; i < value.length; i++) {
+        traverse(value[i], seen);
+      }
+    } else if (isObject(value)) {
+      for (const key in value) {
+        traverse(value[key], seen);
+      }
+    }
+    return value;
   }
   return __toCommonJS(src_exports);
 })();
