@@ -35,10 +35,10 @@
         h("li", { key: 'f' }, 'f'),
         h("li", { key: 'g' }, 'g')
     ), app) */
-    render(h(Fragment, [h("h1", "world")]), app)
+    // render(h(Fragment, [h("h1", "world")]), app)
 
     
-    setTimeout(() => {
+    // setTimeout(() => {
       // 卸载app下面的节点
       // render(null,app)
       // render(h(Text,'999'),app)
@@ -60,7 +60,27 @@
         h("li", { key: 'f' }, 'f'),
         h("li", { key: 'g' }, 'g')
       ), app) */
-    }, 3000)
+    // }, 3000)
+
+
+    //组件的三大特性 属性 插槽 事件
+    const VueComponent = {
+      data(){
+        return{
+          name:"zx",
+          age:"13"
+        }
+      },
+      render(){
+        setTimeout(()=>{
+          this.age++
+          this.name += "1"
+        },1000)
+        return h("div",`${this.name}--${this.age}`)
+      }
+    }
+
+    render(h(VueComponent),app)
 
   </script>
 

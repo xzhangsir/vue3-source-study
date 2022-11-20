@@ -1,4 +1,7 @@
+import { reactive } from "@vue/reactivity"
 import { isString, ShapeFlags } from "@vue/shared"
+import { ReactiveEffect } from "packages/reactivity/src/effect"
+import { queueJob } from "./scheduler"
 import { createVnode, Fragment, isSameVnode,Text } from "./vnode"
 
 export function createRenderer(renderOptions){
@@ -397,6 +400,50 @@ export function createRenderer(renderOptions){
     }
   }
 
+  const mountComponent = (vnode,container,anchor)=>{
+    let {data=()=>({}),render} = vnode.type
+    let state = reactive(data())
+    const instance = {
+      state,
+      vnode, // //组件的虚拟节点
+      subTree:null,// 渲染的节点
+      isMounted:false, //组件是否挂载
+      update:null
+    }
+    const componentUpdateFn = ()=>{
+      // 区分是初始化 还是要更新
+      if(!instance.isMounted){ 
+        //初始化
+        const subTree = render.call(state)
+        // 创造了subtree的真实节点 并插入了
+        patch(null,subTree,container,anchor)
+
+        instance.subTree = subTree
+
+        instance.isMounted = true
+      }else{
+        // 组件内部更新
+        const subTree = render.call(state)
+        patch(instance.subTree,subTree,container,anchor)
+        instance.subTree = subTree
+      }
+    }
+     // ()=>queueJob(instance.update)  组件的异步更新
+    const effect = new ReactiveEffect(componentUpdateFn,()=>queueJob(instance.update))
+    // 将组件强制更新逻辑 保存到组件的实例上
+    let update = instance.update = effect.run.bind(effect)  //  调用这个方法 可以让组件强制重新渲染
+    update()
+
+  }
+
+  const processComponent = (oldN,newN,container,anchor)=>{
+    if(oldN  == null){
+      mountComponent(newN,container,anchor)
+    }else{
+      // 组件更新靠的是props
+    }
+  }
+
   const patch = (oldN,newN,container,anchor = null) =>{
     if(oldN === newN) return null
     // 新老节点 完全不一致  直接删除老的 再创建新的
@@ -417,6 +464,8 @@ export function createRenderer(renderOptions){
       default:
         if(shapeFlag & ShapeFlags.ELEMENT){
           processElement(oldN,newN,container,anchor)
+        }else if(shapeFlag & ShapeFlags.COMPONENT){
+          processComponent(oldN,newN,container,anchor)
         }
     }
   }

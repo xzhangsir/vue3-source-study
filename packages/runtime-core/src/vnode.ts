@@ -1,7 +1,7 @@
 // 一个虚拟节点 需要有 
 // type props  children
 
-import { isArray, isString, ShapeFlags } from "@vue/shared";
+import { isArray, isObject, isString, ShapeFlags } from "@vue/shared";
 
 export const Text = Symbol("Text")
 export const Fragment = Symbol("Fragment")
@@ -21,7 +21,11 @@ export function isSameVnode(n1,n2){
 
 export function createVnode(type,props,children = null){
 
-  let shapeFlag = isString(type) ? ShapeFlags.ELEMENT : 0;
+  let shapeFlag = 
+    //string  说明是元素
+    isString(type) ? ShapeFlags.ELEMENT : 
+    // object 说明是组件(有状态组件)
+    isObject(type) ? ShapeFlags.STATEFUL_COMPONENT : 0;
 
   const vnode = {
     type,
