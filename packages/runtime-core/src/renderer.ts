@@ -48,7 +48,7 @@ export function createRenderer(renderOptions){
     }
   }
 
-  const mountElement=(vnode,container)=>{
+  const mountElement=(vnode,container,anchor)=>{
     let {type,props,children,shapeFlag} = vnode
     // 将创建的真实元素挂载到虚拟节点上，后续方便复用节点和更新
       let el = vnode.el = hostCreateElement(type)
@@ -71,7 +71,7 @@ export function createRenderer(renderOptions){
 
       // console.log(el)
       // 将创建的元素插入到容器中
-      hostInsert(el,container)
+      hostInsert(el,container,anchor)
 
   }
   
@@ -90,6 +90,77 @@ export function createRenderer(renderOptions){
 
   const patchKeyChildren = (c1,c2,el)=>{
     // 比较两个儿子的差异
+    let i = 0;
+    let e1 = c1.length - 1;
+    let e2 = c2.length - 1;
+    // c1 old  c2 new
+
+    //先处理特殊情况 也就是最简单的
+
+    /**
+     * 旧  a   b   c        |  a   b   c
+     *                      |
+     * 新  a   b   c   d    |  a   b
+     * 
+     */
+    //头头比较
+    while(i <= e1 && i <= e2){
+      const n1 = c1[i]
+      const n2 = c2[i]
+      if(isSameVnode(n1,n2)){ //比较两个节点的属性和子节点
+        patch(n1,n2,el)  //继续比较儿子
+      }else{
+        break;
+      }
+      i++
+    }
+
+     /**
+     * 旧      a   b   c   |    a   b   c
+     *                     |
+     * 新  d   a   b   c   |        b   c
+     *    
+     */
+    // 尾尾比较
+    while(i <= e1 && i <= e2){
+      const n1 = c1[e1]
+      const n2 = c2[e2]
+      if(isSameVnode(n1,n2)){ //比较两个节点的属性和子节点
+        patch(n1,n2,el)  //继续比较儿子
+      }else{
+        break;
+      }
+      e1--;
+      e2--;
+    }
+    // common sequence + mount (同序列挂载)
+    // i 要比 e1 大 说明有新增的
+    // i 和 e2 之间的是需要新增的部分
+    if(i > e1){
+      // if(i <= e2){
+        while(i<=e2){
+          const nextPos = e2 + 1
+          // 根据下一个人的索引来看参照物
+          const anchor = nextPos < c2.length ? c2[nextPos].el :null
+          // console.log(anchor)
+          patch(null,c2[i],el,anchor) //创建新增部分的元素
+          i++;
+        }
+      // }
+    }else if(i > e2){
+        // common sequence + unmount (同序列卸载)
+        // i 要比 e2 大 说明有卸载的
+        // i 和   e1 之间的是需要卸载的部分
+        while(i <= e1){
+          unmount(c1[i])
+          i++
+        }
+    }
+
+    // 开始乱序比较
+
+
+
 
   }
 
@@ -172,10 +243,10 @@ export function createRenderer(renderOptions){
     }
   }
 
-  const processElement = (oldN,newN,container)=>{
+  const processElement = (oldN,newN,container,anchor)=>{
     if(oldN === null){
        // 初次渲染（包括元素的初次渲染和组件的初次渲染）
-      mountElement(newN,container)
+      mountElement(newN,container,anchor)
     }else{
       // 更新流程
       /**
@@ -187,7 +258,7 @@ export function createRenderer(renderOptions){
     }
   }
 
-  const patch = (oldN,newN,container) =>{
+  const patch = (oldN,newN,container,anchor = null) =>{
     if(oldN === newN) return null
     // 新老节点 完全不一致  直接删除老的 再创建新的
     if(oldN && !isSameVnode(oldN,newN)){
@@ -203,7 +274,7 @@ export function createRenderer(renderOptions){
         break;
       default:
         if(shapeFlag & ShapeFlags.ELEMENT){
-          processElement(oldN,newN,container)
+          processElement(oldN,newN,container,anchor)
         }
     }
   }
