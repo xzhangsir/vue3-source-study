@@ -192,7 +192,10 @@ export function createRenderer(renderOptions){
       }
     }
     // console.log("newIndexToOldIndexArr",newIndexToOldIndexArr)
+     //  获取最长递增子序列
+    let increment = getSequence(newIndexToOldIndexArr)
      // 需要移动位置
+    let j = increment.length - 1
     for(let i = toBePatched - 1 ; i >= 0 ; i--){
       let index = i + s2
       let current = c2[index]
@@ -203,13 +206,93 @@ export function createRenderer(renderOptions){
         patch(null,current,el,anchor)
       }else{
         // 对比过的 直接插入  复用了老节点
-        hostInsert(current.el,el,anchor)
+       // hostInsert(current.el,el,anchor)
+       if(i !== increment[j]){
+           // 对比过的 直接插入  复用了老节点
+          hostInsert(current.el,el,anchor)
+        }else{
+          j--
+        }
       }
-      //最长递增子序列
-
     }
+  }
+  // 最长递增子序列
+  function getSequence(arr){
+    /**
+     *  2,3,1,5,6,8,7,9,4
+     * 
+     *  1 3 4 6 7 9
+    */
+    // 算的是个数  
+    // 贪心算法 + 二分查找  
+    // 找最有潜力的
+    // 2
+    // 2 3    2和 1 比 二分 1比2小 所以更有递增的潜力
+    // 1 3
+    // 1 3 5
+    // 1 3 5 6
+    // 1 3 5 6 8   8和 7 比 二分 7比8小 所以更有递增的潜力
+    // 1 3 5 6 7
+    // 1 3 5 6 7 9  5和4比 
+    // 1 3 4 6 7 9  
+    /**
+     * 思路
+     * 1:当前这一项比我们最后一项大，则直接放到末尾
+     * 2：如果当前这一项比最后一项小，需要在序列通过二分查找到比当前大的这一项，用他来替换掉
+     * 3：最优的情况，就是默认递增的
+    */
+    const len = arr.length
 
+    // 使用标记索引的方式 最终通过最后一项将结果还原
+    const p = new Array(len).fill(0) /** */
 
+    const result = [0]
+    let start,end,middle;
+    let resultLastIndex;
+    for(let i = 0 ; i < len ;i++){
+      let arrI = arr[i]
+      // 序列中的0意味着没有 需要创建
+      if(arrI !== 0){
+        resultLastIndex = result[result.length - 1]
+        //比较最后一项和当前项的值 
+        //如果比最后一项大 则将当前索引放到结果集中
+        if(arr[resultLastIndex] < arrI){
+          result.push(i)
+
+          // 当前放在末尾的要记住他前面的那节点是谁
+          p[i] = resultLastIndex /** */
+          continue
+        }
+        // 这里我们需要通过二分查找，在结果集中找到比当前值最大的，用当前值的索引将其替换掉
+
+        // 递增序列  采用二分查找 
+        start = 0;
+        end = result.length - 1;
+
+        while(start < end){
+          middle = ((start + end) / 2) | 0
+          if(arr[result[middle]] < arrI){
+            start = middle + 1
+          }else{
+            end = middle
+          }
+        }
+        // 找到需要替换的  用更有递增潜力的直接替换调
+        if(arr[result[end]] > arrI){
+          result[end] = i
+          p[i] = result[end - 1]
+        }
+      }
+    }
+    // console.log(p)
+    // 通过最后一项进行回溯
+    ;let i = result.length
+    let last = result[i - 1]
+    while(i-- > 0){
+      result[i] = last
+      last = p[last]
+    }
+    return result
   }
 
   const patchChildren = (oldN,newN,el)=>{
