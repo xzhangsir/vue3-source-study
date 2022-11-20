@@ -4,6 +4,7 @@
 import { isArray, isString, ShapeFlags } from "@vue/shared";
 
 export const Text = Symbol("Text")
+export const Fragment = Symbol("Fragment")
 
 export function isVnode(val){
   return !!(val && val.__v_isVnode)

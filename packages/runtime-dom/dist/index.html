@@ -13,7 +13,7 @@
 <body>
   <div id="app"></div>
   <script>
-    let { createRenderer, h, render, Text } = VueRuntimeDOM
+    let { createRenderer, h, render, Text , Fragment } = VueRuntimeDOM
     //console.log(h("h1", { style: { color: 'red' } }, "hello"))
     //render(h("h1", { style: { color: 'red' } }, "hello"), app)
     //render(h("div", {style:{background:"#f00"}}, [h("span",{style:{color:"#0f0"}},"span1"), h("span", { style: { color: "#00f" } }, "span2")]),app)
@@ -26,7 +26,7 @@
         h("li", { key: 'c' }, 'c'),
         h("li", { key: 'e' }, 'e'),
       ), app) */
-    render(h("h1", { style: { color: "red" } },
+    /* render(h("h1", { style: { color: "red" } },
         h("li", { key: 'a' }, 'a'),
         h("li", { key: 'b' }, 'b'),
         h("li", { key: 'c' }, 'c'),
@@ -34,7 +34,9 @@
         h("li", { key: 'e' }, 'e'),
         h("li", { key: 'f' }, 'f'),
         h("li", { key: 'g' }, 'g')
-    ), app)
+    ), app) */
+    render(h(Fragment, [h("h1", "world")]), app)
+
     
     setTimeout(() => {
       // 卸载app下面的节点
@@ -48,7 +50,7 @@
         h("li", { key: 'b' }, 'b'),
         h("li", { key: 'c' }, 'c'),
       ), app) */
-      render(h("h1", { style: { color: "blue", background: "red" } },
+     /*  render(h("h1", { style: { color: "blue", background: "red" } },
         h("li", { key: 'a' }, 'a'),
         h("li", { key: 'b' }, 'b'),
         h("li", { key: 'e' }, 'e'),
@@ -57,7 +59,7 @@
         h("li", { key: 'h' }, 'h'),
         h("li", { key: 'f' }, 'f'),
         h("li", { key: 'g' }, 'g')
-      ), app)
+      ), app) */
     }, 3000)
 
   </script>

@@ -1,5 +1,5 @@
 import { isString, ShapeFlags } from "@vue/shared"
-import { createVnode, isSameVnode,Text } from "./vnode"
+import { createVnode, Fragment, isSameVnode,Text } from "./vnode"
 
 export function createRenderer(renderOptions){
   // console.log(renderOptions)
@@ -374,6 +374,14 @@ export function createRenderer(renderOptions){
     }
   }
 
+  const processFragment = (oldN,newN,container)=>{
+    if(oldN == null){
+      mountChildren(container,newN.children)
+    }else{
+      patchChildren(oldN,newN,container)
+    }
+  }
+
   const processElement = (oldN,newN,container,anchor)=>{
     if(oldN === null){
        // 初次渲染（包括元素的初次渲染和组件的初次渲染）
@@ -403,6 +411,9 @@ export function createRenderer(renderOptions){
       case Text:
           processText(oldN,newN,container)
         break;
+      case Fragment:
+          processFragment(oldN,newN,container)
+         break;
       default:
         if(shapeFlag & ShapeFlags.ELEMENT){
           processElement(oldN,newN,container,anchor)
