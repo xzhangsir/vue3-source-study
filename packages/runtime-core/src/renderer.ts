@@ -158,8 +158,56 @@ export function createRenderer(renderOptions){
     }
 
     // 开始乱序比较
+    /**
+    * 旧  a   b   c   d   e      f  g
+    * 
+    * 新  a   b   e   c   d   h  f  g
+    * 
+    * */
+    let s1 = i
+    let s2 = i
+    // console.log(s1,e1)  // 2 4
+    // console.log(s2,e2)  // 2 5
+    const keyToNewIndexMap = new Map()
 
+    //  先将新的存起来
+    for(let i = s2; i <= e2 ;i++){
+        keyToNewIndexMap.set(c2[i].key,i)
+    }
+    // console.log("keyToNewIndexMap",keyToNewIndexMap)
+    // 循环老的元素 看一下新的里面有没有
+    // 如果有需要比较差异 没有就删除
+    const toBePatched = e2 - s2 + 1; //新的总个数
+    // 记录是否比对过的映射表
+    const newIndexToOldIndexArr = new Array(toBePatched).fill(0)
+    for(let i = s1 ; i <= e1 ;i++){
+      const oldChild = c1[i] //老的孩子
+      let newIndex = keyToNewIndexMap.get(oldChild.key) //新孩子的索引
+      if(newIndex === undefined){
+        unmount(oldChild)
+      }else{
+        // 新的位置  对应的老的位置
+        newIndexToOldIndexArr[newIndex - s2] = i + 1;
+        patch(oldChild,c2[newIndex],el)
+      }
+    }
+    // console.log("newIndexToOldIndexArr",newIndexToOldIndexArr)
+     // 需要移动位置
+    for(let i = toBePatched - 1 ; i >= 0 ; i--){
+      let index = i + s2
+      let current = c2[index]
+      // console.log(current)
+      let anchor =  index + 1 < c2.length ? c2[index + 1].el  : null;
+      if(newIndexToOldIndexArr[i] === 0){
+        // 创建
+        patch(null,current,el,anchor)
+      }else{
+        // 对比过的 直接插入  复用了老节点
+        hostInsert(current.el,el,anchor)
+      }
+      //最长递增子序列
 
+    }
 
 
   }

@@ -20,23 +20,43 @@
     //render(h("h1", { style: { color: 'red' }, onClick: () => { alert(123) } }, h("span", "text")), app)
     //render(h(Text, "hello"), app)
     //render(h("h1", { style: { color: "red" } }, "原来的"), app)
-    render(h("h1", { style: { color: "red" } },
+   /*  render(h("h1", { style: { color: "red" } },
         h("li", { key: 'a' }, 'a'),
         h("li", { key: 'b' }, 'b'),
         h("li", { key: 'c' }, 'c'),
         h("li", { key: 'e' }, 'e'),
-      ), app)
+      ), app) */
+    render(h("h1", { style: { color: "red" } },
+        h("li", { key: 'a' }, 'a'),
+        h("li", { key: 'b' }, 'b'),
+        h("li", { key: 'c' }, 'c'),
+        h("li", { key: 'd' }, 'd'),
+        h("li", { key: 'e' }, 'e'),
+        h("li", { key: 'f' }, 'f'),
+        h("li", { key: 'g' }, 'g')
+    ), app)
+    
     setTimeout(() => {
       // 卸载app下面的节点
       // render(null,app)
       // render(h(Text,'999'),app)
       // render(h(Text,"hello"),app)
       //render(h("h1", { style: { color: "blue", background: "red" } }, "更新后"), app)
-      render(h("h1", { style: { color: "blue", background: "red" } },
+      /* render(h("h1", { style: { color: "blue", background: "red" } },
       
         h("li", { key: 'a' }, 'a'),
         h("li", { key: 'b' }, 'b'),
         h("li", { key: 'c' }, 'c'),
+      ), app) */
+      render(h("h1", { style: { color: "blue", background: "red" } },
+        h("li", { key: 'a' }, 'a'),
+        h("li", { key: 'b' }, 'b'),
+        h("li", { key: 'e' }, 'e'),
+        h("li", { key: 'c' }, 'c'),
+        h("li", { key: 'd' }, 'd'),
+        h("li", { key: 'h' }, 'h'),
+        h("li", { key: 'f' }, 'f'),
+        h("li", { key: 'g' }, 'g')
       ), app)
     }, 3000)
 
