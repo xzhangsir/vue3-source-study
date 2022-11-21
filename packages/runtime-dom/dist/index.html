@@ -83,7 +83,7 @@
     render(h(VueComponent),app)
  */
 
-
+/* 
  const VueComponent = {
     props: {
       address: String,
@@ -97,7 +97,35 @@
       return h('p', this.address + this.$attrs.a + this.c.n)
     }
   }
-   render(h(VueComponent, { address: "中国", a: 1, c: { n: 1 } }), app)
+  render(h(VueComponent, { address: "中国", a: 1, c: { n: 1 } }), app)
+ */
+
+  const MyCom = {
+    props: {
+      address: String
+    },
+    render() {
+      return h(Text, this.address)
+    }
+  }
+
+  const VueComponent = {
+    data() {
+      return {
+        flag: false
+      }
+    },
+    render() {
+      return h(Fragment, [
+        h('button', { onClick: () => this.flag = !this.flag }, "切换渲染"),
+        h(MyCom, { address: this.flag ? '地球' : "月球" })
+      ])
+    }
+  }
+
+
+  render(h(VueComponent), app)
+
   </script>
 
 

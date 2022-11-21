@@ -2,6 +2,7 @@ import { reactive } from "@vue/reactivity"
 import { isNumber, isString, ShapeFlags } from "@vue/shared"
 import { ReactiveEffect } from "packages/reactivity/src/effect"
 import { createComponentInstance, setupComponent } from "./component"
+import { hasPropsChanged, updateProps } from "./componentProps"
 import { queueJob } from "./scheduler"
 import { createVnode, Fragment, isSameVnode,Text } from "./vnode"
 
@@ -411,6 +412,12 @@ export function createRenderer(renderOptions){
 
   }
 
+  const  updateComponentPreRender = (instance,next)=>{
+    instance.next = null
+    instance.vnode = next //实例上最新的虚拟节点
+    updateProps(instance.props,next.props)
+  }
+
 
   const setupRenderEffect = (instance,container,anchor)=>{
     const {render} = instance
@@ -427,6 +434,11 @@ export function createRenderer(renderOptions){
         instance.isMounted = true
       }else{
         // 组件内部更新
+        let {next} = instance
+        if(next){
+          // 更新前需要拿到最新的属性来进行更新
+          updateComponentPreRender(instance,next)
+        }
         const subTree = render.call(instance.proxy)
         patch(instance.subTree,subTree,container,anchor)
         instance.subTree = subTree
@@ -438,12 +450,36 @@ export function createRenderer(renderOptions){
     let update = instance.update = effect.run.bind(effect)  //  调用这个方法 可以让组件强制重新渲染
     update()
   }
+  
+  const shouldUpdateComponent=(n1,n2)=>{
+    const {props:prevProps,children:prevChildren} = n1
+    const {props:nextProps,children:nextChildren} = n2
+
+    if(prevProps === nextProps) return false
+
+    if(prevChildren || nextChildren){
+      return true
+    }
+
+    return hasPropsChanged(prevProps,nextProps)
+  }
+
+  const updateComponent = (n1,n2)=>{
+    // 对于元素而已 复用的是dom节点 对于组件复用的是实例
+    const instance = (n2.component = n1.component)
+     // 组件需要更新 只需要调用实例的update
+    if(shouldUpdateComponent(n1,n2)){
+      instance.next = n2
+      instance.update()
+    }
+  }
 
   const processComponent = (oldN,newN,container,anchor)=>{
     if(oldN  == null){
       mountComponent(newN,container,anchor)
     }else{
       // 组件更新靠的是props
+      updateComponent(oldN,newN)
     }
   }
 

@@ -29,3 +29,31 @@ export function initProps(instance,rawProps){
    instance.props = shallowReactive(props)
    instance.attrs = attrs
 }
+// props 是否需要更新
+export const hasPropsChanged = (prevProps = {},nextProps = {})=>{
+  const nextKeys = Object.keys(nextProps)
+  // 比对属性前后 个数是否一致  不一致就需要更新
+  if(nextKeys.length !==  Object.keys(prevProps).length){
+    return true
+  }
+  // 再比对属性前后的值 是否一致 不一致也要更新
+  for(let i = 0 ; i < nextKeys.length ;i++){
+    const key = nextKeys[i]
+    if(nextProps[key] !== prevProps[key]){
+      return true
+    }
+  }
+  return  false
+}
+
+export function updateProps(prevProps,nextProps){
+    for(const key in nextProps){
+      prevProps[key] = nextProps[key]
+    }
+
+    for(const key in prevProps){
+      if(!Object.hasOwn(nextProps,key)){
+        delete prevProps[key]
+      }
+    }
+}
