@@ -1,6 +1,7 @@
 import { reactive } from "@vue/reactivity"
-import { isString, ShapeFlags } from "@vue/shared"
+import { isNumber, isString, ShapeFlags } from "@vue/shared"
 import { ReactiveEffect } from "packages/reactivity/src/effect"
+import { createComponentInstance, setupComponent } from "./component"
 import { queueJob } from "./scheduler"
 import { createVnode, Fragment, isSameVnode,Text } from "./vnode"
 
@@ -28,9 +29,9 @@ export function createRenderer(renderOptions){
 
   } = renderOptions
 
-   const normalize = (children,i)=>{
+  const normalize = (children,i)=>{
     // 将 字符串文本 转为 （Text,"字符串"）
-    if(isString(children[i])){
+    if(isString(children[i]) || isNumber(children[i])){
        let vnode = createVnode(Text,null,children[i])
        children[i] = vnode
     }
@@ -401,20 +402,23 @@ export function createRenderer(renderOptions){
   }
 
   const mountComponent = (vnode,container,anchor)=>{
-    let {data=()=>({}),render} = vnode.type
-    let state = reactive(data())
-    const instance = {
-      state,
-      vnode, // //组件的虚拟节点
-      subTree:null,// 渲染的节点
-      isMounted:false, //组件是否挂载
-      update:null
-    }
+    // 1 ) 要创造一个组件的实例
+    let instance =  vnode.component = createComponentInstance(vnode)
+    // 2 ) 给实例上赋值
+    setupComponent(instance)
+    // 3 ） 创造一个effect
+    setupRenderEffect(instance,container,anchor)
+
+  }
+
+
+  const setupRenderEffect = (instance,container,anchor)=>{
+    const {render} = instance
     const componentUpdateFn = ()=>{
       // 区分是初始化 还是要更新
       if(!instance.isMounted){ 
         //初始化
-        const subTree = render.call(state)
+        const subTree = render.call(instance.proxy)
         // 创造了subtree的真实节点 并插入了
         patch(null,subTree,container,anchor)
 
@@ -423,7 +427,7 @@ export function createRenderer(renderOptions){
         instance.isMounted = true
       }else{
         // 组件内部更新
-        const subTree = render.call(state)
+        const subTree = render.call(instance.proxy)
         patch(instance.subTree,subTree,container,anchor)
         instance.subTree = subTree
       }
@@ -433,7 +437,6 @@ export function createRenderer(renderOptions){
     // 将组件强制更新逻辑 保存到组件的实例上
     let update = instance.update = effect.run.bind(effect)  //  调用这个方法 可以让组件强制重新渲染
     update()
-
   }
 
   const processComponent = (oldN,newN,container,anchor)=>{
