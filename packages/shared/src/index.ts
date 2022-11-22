@@ -33,3 +33,10 @@ export const enum ShapeFlags { // 形状标识
 // 位运算 & | 适合权限的组合 
 // let user = 增加（01） | 删除 （10） ； 11
 // user（11） & 增加（01）  得 01  故而判断用户有增加的权限
+
+
+export  const invokeArrayFns = (fns)=>{
+  for(let i = 0 ; i < fns.length ;i++){
+    fns[i]()
+  }
+}
