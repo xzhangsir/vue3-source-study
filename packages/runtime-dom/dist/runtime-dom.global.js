@@ -535,7 +535,13 @@ var VueRuntimeDOM = (() => {
     }
     let setup = type.setup;
     if (setup) {
-      const setupContext = {};
+      const setupContext = {
+        emit: (event, ...args) => {
+          const eventName = `on${event[0].toUpperCase()}${event.slice(1)}`;
+          const handler = instance.vnode.props[eventName];
+          handler && handler(...args);
+        }
+      };
       const setupResult = setup(instance.props, setupContext);
       if (isFunction(setupResult)) {
         instance.render = setupResult;

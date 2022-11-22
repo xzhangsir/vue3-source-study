@@ -36,7 +36,7 @@
          }
        } */
 
-    const VueComponent = {
+/*     const VueComponent = {
       props: {
         address: String
       },
@@ -54,7 +54,16 @@
     }
 
     render(h(VueComponent, { address: "diqu" }), app)
+ */
 
+ const VueComponent = {
+    setup(props, { emit }) {
+      return () => {
+        return h("h1", { onClick: () => emit('xxx', 'ok') }, 'hello')
+      }
+    }
+  }
+  render(h(VueComponent, { onXxx: (val) => alert(val) }), app)
 
 
   </script>
