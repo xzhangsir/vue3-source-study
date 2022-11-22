@@ -22,12 +22,28 @@ var VueRuntimeDOM = (() => {
   __export(src_exports, {
     Fragment: () => Fragment,
     Text: () => Text,
+    computed: () => computed,
     createRenderer: () => createRenderer,
     createVnode: () => createVnode,
+    effect: () => effect,
     h: () => h,
+    isReactive: () => isReactive,
+    isReadonly: () => isReadonly,
+    isRef: () => isRef,
     isSameVnode: () => isSameVnode,
     isVnode: () => isVnode,
-    render: () => render
+    proxyRefs: () => proxyRefs,
+    reactive: () => reactive,
+    readonly: () => readonly,
+    ref: () => ref,
+    render: () => render,
+    shallowReactive: () => shallowReactive,
+    shallowReadonly: () => shallowReadonly,
+    stop: () => stop,
+    toRef: () => toRef,
+    toRefs: () => toRefs,
+    unRef: () => unRef,
+    watch: () => watch
   });
 
   // packages/shared/src/index.ts
@@ -43,6 +59,7 @@ var VueRuntimeDOM = (() => {
   var isNumber = (val) => {
     return typeof val === "number";
   };
+  var hasChanged = (value, oldValue) => !Object.is(value, oldValue);
   var isArray = Array.isArray;
   var extend = Object.assign;
 
@@ -82,6 +99,13 @@ var VueRuntimeDOM = (() => {
         this.onStop();
     }
   };
+  function effect(fn, options = {}) {
+    const _effect = new ReactiveEffect(fn, options);
+    _effect.run();
+    const runner = _effect.run.bind(_effect);
+    runner.effect = _effect;
+    return runner;
+  }
   var targetMap = /* @__PURE__ */ new WeakMap();
   function track(target, key) {
     if (!isTracking())
@@ -127,6 +151,9 @@ var VueRuntimeDOM = (() => {
     }
     effect2.deps.length = 0;
   }
+  function stop(runner) {
+    runner.effect.stop();
+  }
   function isTracking() {
     return shouldTrack && activeEffect !== void 0;
   }
@@ -137,22 +164,22 @@ var VueRuntimeDOM = (() => {
   var readonlyGet = createGetter(true);
   var shallowReactiveGet = createGetter(false, true);
   var shallowReadonlyGet = createGetter(true, true);
-  function createGetter(isReadonly = false, shallow = false) {
+  function createGetter(isReadonly2 = false, shallow = false) {
     return function get2(target, key, receiver) {
       if (key === "__v_isReactive" /* IS_REACTIVE */) {
         return true;
       }
       if (key === "__v_isReadonly" /* IS_READONLY */) {
-        return isReadonly;
+        return isReadonly2;
       }
-      if (!isReadonly) {
+      if (!isReadonly2) {
         track(target, key);
       }
       const res = Reflect.get(target, key, receiver);
       if (shallow)
         return res;
       if (isObject(res)) {
-        return isReadonly ? readonly(res) : reactive(res);
+        return isReadonly2 ? readonly(res) : reactive(res);
       }
       return res;
     };
@@ -201,6 +228,12 @@ var VueRuntimeDOM = (() => {
     const proxy = new Proxy(target, readonlyHandlers);
     return proxy;
   }
+  function isReactive(target) {
+    return !!target["__v_isReactive" /* IS_REACTIVE */];
+  }
+  function isReadonly(target) {
+    return !!target["__v_isReadonly" /* IS_READONLY */];
+  }
   function shallowReactive(target) {
     if (!isObject(target))
       return;
@@ -210,6 +243,188 @@ var VueRuntimeDOM = (() => {
     const proxy = new Proxy(target, shallowReactiveHandlers);
     reactiveMap.set(target, proxy);
     return proxy;
+  }
+  function shallowReadonly(target) {
+    const proxy = new Proxy(target, shallowReadonlyHandlers);
+    return proxy;
+  }
+
+  // packages/reactivity/src/ref.ts
+  var RefImpl = class {
+    constructor(val) {
+      this.__v_isRef = true;
+      this.dep = /* @__PURE__ */ new Set();
+      this._rawVal = val;
+      this._value = toReactive(val);
+    }
+    get value() {
+      if (!this.dep.has(activeEffect)) {
+        this.dep.add(activeEffect);
+      }
+      return this._value;
+    }
+    set value(newVal) {
+      if (!hasChanged(this._rawVal, newVal))
+        return;
+      this._rawVal = newVal;
+      this._value = toReactive(newVal);
+      triggerEffects(this.dep);
+    }
+  };
+  function ref(val) {
+    return new RefImpl(val);
+  }
+  function isRef(ref2) {
+    return !!ref2.__v_isRef;
+  }
+  function unRef(ref2) {
+    return isRef(ref2) ? ref2.value : ref2;
+  }
+  var ObjectRefImpl = class {
+    constructor(object, key) {
+      this.object = object;
+      this.key = key;
+    }
+    get value() {
+      return this.object[this.key];
+    }
+    set value(newVal) {
+      this.object[this.key] = newVal;
+    }
+  };
+  function toRef(reactive2, key) {
+    return new ObjectRefImpl(reactive2, key);
+  }
+  function toRefs(obj) {
+    const ret = isArray(obj) ? new Array(obj.length) : {};
+    for (const key in obj) {
+      ret[key] = toRef(obj, key);
+    }
+    return ret;
+  }
+  function proxyRefs(obj) {
+    return new Proxy(obj, {
+      get(target, key) {
+        return unRef(Reflect.get(target, key));
+      },
+      set(target, key, newVal) {
+        if (isRef(target[key]) && !isRef(newVal)) {
+          return target[key].value = newVal;
+        } else {
+          return Reflect.set(target, key, newVal);
+        }
+      }
+    });
+  }
+  function toReactive(val) {
+    return isObject(val) ? reactive(val) : val;
+  }
+
+  // packages/reactivity/src/computed.ts
+  var ComputedRefImpl = class {
+    constructor(getter, setter) {
+      this.setter = setter;
+      this._dirty = true;
+      this.__v_isReadonly = true;
+      this.__v_isRef = true;
+      this.dep = /* @__PURE__ */ new Set();
+      this._getter = getter;
+      this._effect = new ReactiveEffect(getter, () => {
+        if (!this._dirty) {
+          this._dirty = true;
+          triggerEffects(this.dep);
+        }
+      });
+    }
+    get value() {
+      this.dep.add(activeEffect);
+      if (this._dirty) {
+        this._dirty = false;
+        this._value = this._effect.run();
+      }
+      return this._value;
+    }
+    set value(newVal) {
+      this.setter(newVal);
+    }
+  };
+  function computed(getterOrOptions) {
+    let onlyGetter = isFunction(getterOrOptions);
+    let getter, setter;
+    if (onlyGetter) {
+      getter = getterOrOptions;
+      setter = () => {
+        console.warn("no set");
+      };
+    } else {
+      getter = getterOrOptions.get;
+      setter = getterOrOptions.set;
+    }
+    return new ComputedRefImpl(getter, setter);
+  }
+
+  // packages/reactivity/src/watch.ts
+  function watch(source, cb, options) {
+    return doWatch(source, cb, options);
+  }
+  function doWatch(source, cb, { immediate, deep, flush, onTrack, onTrigger }) {
+    let getter;
+    if (isRef(source)) {
+      getter = source.value;
+    } else if (isReactive(source)) {
+      getter = () => source;
+      deep = true;
+    } else if (isArray(source)) {
+      getter = () => source.map((s) => {
+        if (isRef(s)) {
+          return s.value;
+        } else if (isReactive(s)) {
+          return traverse(s);
+        } else if (isFunction(s)) {
+          return s();
+        }
+      });
+    } else if (isFunction(source)) {
+      getter = () => source();
+    }
+    if (cb && deep) {
+      const baseGetter = getter;
+      getter = () => traverse(baseGetter());
+    }
+    let oldValue;
+    const job = () => {
+      let newValue = effect2.run();
+      cb(newValue, oldValue);
+      oldValue = newValue;
+    };
+    const scheduler = () => job();
+    const effect2 = new ReactiveEffect(getter, scheduler);
+    if (immediate) {
+      job();
+    } else {
+      oldValue = effect2.run();
+    }
+  }
+  function traverse(value, seen) {
+    if (!isObject(value)) {
+      return value;
+    }
+    seen = seen || /* @__PURE__ */ new Set();
+    if (seen.has(value)) {
+      return value;
+    }
+    seen.add(value);
+    if (isRef(value)) {
+    } else if (Array.isArray(value)) {
+      for (let i = 0; i < value.length; i++) {
+        traverse(value[i], seen);
+      }
+    } else if (isObject(value)) {
+      for (const key in value) {
+        traverse(value[key], seen);
+      }
+    }
+    return value;
   }
 
   // packages/runtime-core/src/componentProps.ts
@@ -270,7 +485,8 @@ var VueRuntimeDOM = (() => {
       props: {},
       attrs: {},
       proxy: null,
-      render: null
+      render: null,
+      setupState: {}
     };
     return instance;
   }
@@ -282,9 +498,11 @@ var VueRuntimeDOM = (() => {
     initProps(instance, props);
     instance.proxy = new Proxy(instance, {
       get(target, key) {
-        const { data: data2, props: props2 } = target;
+        const { data: data2, props: props2, setupState } = target;
         if (data2 && Object.hasOwn(data2, key)) {
           return data2[key];
+        } else if (props2 && Object.hasOwn(setupState, key)) {
+          return setupState[key];
         } else if (props2 && Object.hasOwn(props2, key)) {
           return props2[key];
         }
@@ -294,9 +512,12 @@ var VueRuntimeDOM = (() => {
         }
       },
       set(target, key, val) {
-        const { data: data2, props: props2 } = target;
+        const { data: data2, props: props2, setupState } = target;
         if (data2 && Object.hasOwn(data2, key)) {
           data2[key] = val;
+          return true;
+        } else if (data2 && Object.hasOwn(setupState, key)) {
+          setupState[key] = val;
           return true;
         } else if (props2 && Object.hasOwn(props2, key)) {
           console.warn("\u7EC4\u4EF6\u5185\u4E0D\u80FD\u4FEE\u6539\u7EC4\u4EF6\u7684props" + key);
@@ -312,7 +533,19 @@ var VueRuntimeDOM = (() => {
       }
       instance.data = reactive(data.call(instance.proxy));
     }
-    instance.render = type.render;
+    let setup = type.setup;
+    if (setup) {
+      const setupContext = {};
+      const setupResult = setup(instance.props, setupContext);
+      if (isFunction(setupResult)) {
+        instance.render = setupResult;
+      } else if (isObject(setupResult)) {
+        instance.setupState = proxyRefs(setupResult);
+      }
+    }
+    if (!instance.render) {
+      instance.render = type.render;
+    }
   }
 
   // packages/runtime-core/src/scheduler.ts
@@ -569,6 +802,9 @@ var VueRuntimeDOM = (() => {
       let oldProps = oldN.props || {};
       let newProps = newN.props || {};
       patchProps(oldProps, newProps, el);
+      for (let i = 0; i < newN.children.length; i++) {
+        newN.children[i] = normalize(newN.children, i);
+      }
       patchChildren(oldN, newN, el);
     };
     const processText = (oldN, newN, container) => {

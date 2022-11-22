@@ -363,6 +363,9 @@ export function createRenderer(renderOptions){
     // 先比较属性  
     patchProps(oldProps,newProps,el)
     // 再比较儿子
+    for(let i = 0 ; i < newN.children.length ;i++){
+      newN.children[i] = normalize(newN.children,i)
+    }
     patchChildren(oldN,newN,el)
   }
 
