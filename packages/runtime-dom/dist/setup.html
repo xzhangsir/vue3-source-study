@@ -56,7 +56,7 @@
     render(h(VueComponent, { address: "diqu" }), app)
  */
 
- const VueComponent = {
+/*  const VueComponent = {
     setup(props, { emit }) {
       return () => {
         return h("h1", { onClick: () => emit('xxx', 'ok') }, 'hello')
@@ -64,7 +64,32 @@
     }
   }
   render(h(VueComponent, { onXxx: (val) => alert(val) }), app)
+ */
 
+//  插槽
+ const MyCom = {
+    render() {
+      return h(Fragment, [
+        h('div', this.$slots.header()),
+        "center",
+        h('div', this.$slots.footer())
+      ])
+    }
+  }
+
+
+
+  const VueComponent = {
+    render() {
+      // children 如果是对象说明是组件的插槽
+      return h(MyCom, null, {
+        header: () => h('p', 'header'),
+        footer: () => h('p', 'footer')
+      })
+    }
+  }
+
+  render(h(VueComponent), app)
 
   </script>
 
