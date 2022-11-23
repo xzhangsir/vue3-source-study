@@ -1,5 +1,5 @@
 import { reactive } from "@vue/reactivity"
-import { invokeArrayFns,isNumber, isString, ShapeFlags } from "@vue/shared"
+import { invokeArrayFns,isNumber, isString, PatchFlags, ShapeFlags } from "@vue/shared"
 import { ReactiveEffect } from "packages/reactivity/src/effect"
 import { createComponentInstance, setupComponent } from "./component"
 import { hasPropsChanged, updateProps } from "./componentProps"
@@ -355,18 +355,42 @@ export function createRenderer(renderOptions){
     }
   }
 
+  const patchBlockChildren = (oldN,newN)=>{
+    for(let i = 0 ; i < newN.dynamicChildren.length ;i++){
+      patchElement(oldN.dynamicChildren[i],newN.dynamicChildren[i])
+    }
+  }
+
   const patchElement = (oldN,newN)=>{
     let el = newN.el = oldN.el
     
     let oldProps = oldN.props || {}
     let newProps = newN.props || {}
     // 先比较属性  
-    patchProps(oldProps,newProps,el)
-    // 再比较儿子
-    for(let i = 0 ; i < newN.children.length ;i++){
-      newN.children[i] = normalize(newN.children,i)
+
+    // 属性的靶向更新
+    let {patchFlag} = newN
+    if(patchFlag & PatchFlags.CLASS){
+      if(oldProps.class !== newProps.class){
+        hostPatchProp(el,'class',null,newProps.class)
+      }
+      // style ... 事件等
+    }else{
+      patchProps(oldProps,newProps,el)
     }
-    patchChildren(oldN,newN,el)
+
+    
+    // 再比较儿子
+    // 元素的靶向更新
+    if(newN.dynamicChildren){
+      patchBlockChildren(oldN,newN)
+    }else{
+      for(let i = 0 ; i < newN.children.length ;i++){
+        newN.children[i] = normalize(newN.children,i)
+      }
+      patchChildren(oldN,newN,el)
+    }
+    
   }
 
   const processText = (oldN,newN,container)=>{
@@ -432,7 +456,7 @@ export function createRenderer(renderOptions){
           invokeArrayFns(bm)
         }
         //初始化
-        const subTree = render.call(instance.proxy)
+        const subTree = render.call(instance.proxy,instance.proxy)
         // 创造了subtree的真实节点 并插入了
         patch(null,subTree,container,anchor)
         if(m){
@@ -452,7 +476,7 @@ export function createRenderer(renderOptions){
         if(bu){
           invokeArrayFns(bu)
         }
-        const subTree = render.call(instance.proxy)
+        const subTree = render.call(instance.proxy,instance.proxy)
         patch(instance.subTree,subTree,container,anchor)
         instance.subTree = subTree
         if(u){

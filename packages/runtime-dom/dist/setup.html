@@ -14,7 +14,9 @@
   <script>
 
     let { createRenderer, h, render, reactive, Text, Fragment,
-        ref, toRefs, onBeforeMount, onMounted, onBeforeUpdate, onUpdated, getCurrentInstance } = VueRuntimeDOM
+        ref, toRefs, onBeforeMount, onMounted, onBeforeUpdate, onUpdated, getCurrentInstance,
+      createElementBlock: _createElementBlock, openBlock: _openBlock,
+      topDisplayString: _toDisplayString, createElementVNode: _createElementVNode } = VueRuntimeDOM
     // setup  可以返回render函数或对象
 /*        const VueComponent = {
          props:{
@@ -94,7 +96,7 @@
 
 
    //  生命周期
-    const useCounter = (count) => {
+/*     const useCounter = (count) => {
       const state = reactive({ count })
       const handleClick = () => {
         state.count++
@@ -137,7 +139,40 @@
       }
     }
 
-    render(h(VueComponent), app) 
+    render(h(VueComponent), app)  */
+
+
+      // 靶向更新
+  
+    // 模板编译优化 增添了patchFlag  来标识那些节点是动态的
+    // block 来收集节点 为不稳定结构也创建block节点 实现blockTree做到靶向更新
+    // 编译中的优化： 静态提升  属性的提升 和 虚拟节点的提升  函数的缓存 预先解析字符串
+    // 模板的性能更好
+        const VueComponent = {
+          setup() {
+            const state = reactive({ name: "zx", class: "abc" })
+
+            setTimeout(() => {
+              state.name = "eee"
+              state.class = 'def'
+            }, 1000)
+
+            return {
+              state
+            }
+          },
+          render(_ctx) {
+            let vnode = (_openBlock(), _createElementBlock("div", null, [
+              _createElementVNode("h1", null, "hello"),
+              _createElementVNode("span", { class: _ctx.state.class },
+              _toDisplayString(_ctx.state.name), 1 /*TEXT*/),
+            ]))
+            console.log(vnode)
+            return vnode
+          }
+        }
+
+        render(h(VueComponent), app) 
 
   </script>
 

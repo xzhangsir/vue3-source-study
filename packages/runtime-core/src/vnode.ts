@@ -19,7 +19,7 @@ export function isSameVnode(n1,n2){
 }
 // 虚拟节点有很多种 比如：组件 元素 文本
 
-export function createVnode(type,props,children = null){
+export function createVnode(type,props,children = null,patchFlag = 0){
 
   let shapeFlag = 
     //string  说明是元素
@@ -34,7 +34,8 @@ export function createVnode(type,props,children = null){
     el:null,//虚拟节点上对应的真实节点，后续diff算法
     key:props?.['key'],
     __v_isVnode:true,
-    shapeFlag
+    shapeFlag,
+    patchFlag
   }
   if(children){
     let type = 0;
@@ -48,5 +49,31 @@ export function createVnode(type,props,children = null){
     }
     vnode.shapeFlag = shapeFlag | type
   }
+  if(currentBlock && vnode.patchFlag > 0){
+    currentBlock.push(vnode)
+  }
   return vnode
 }
+
+
+let currentBlock = null
+export function openBlock(){
+  currentBlock = []
+}
+
+export function createElementBlock(type,props,children,PatchFlag){
+  return setupBlock(createVnode(type,props,children,PatchFlag))
+}
+
+function setupBlock(vnode){
+  vnode.dynamicChildren = currentBlock
+  currentBlock = null
+  return vnode
+}
+
+export function topDisplayString(val){
+  return isString(val) ? val : val == null ? '' : isObject(val) ? JSON.stringify(val) : String(val)
+}
+
+
+export {createVnode as createElementVNode}

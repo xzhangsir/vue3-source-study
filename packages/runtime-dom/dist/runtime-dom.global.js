@@ -25,6 +25,8 @@ var VueRuntimeDOM = (() => {
     Text: () => Text,
     computed: () => computed,
     createComponentInstance: () => createComponentInstance,
+    createElementBlock: () => createElementBlock,
+    createElementVNode: () => createVnode,
     createRenderer: () => createRenderer,
     createVnode: () => createVnode,
     currentInstance: () => currentInstance,
@@ -40,6 +42,7 @@ var VueRuntimeDOM = (() => {
     onBeforeUpdate: () => onBeforeUpdate,
     onMounted: () => onMounted,
     onUpdated: () => onUpdated,
+    openBlock: () => openBlock,
     proxyRefs: () => proxyRefs,
     reactive: () => reactive,
     readonly: () => readonly,
@@ -52,6 +55,7 @@ var VueRuntimeDOM = (() => {
     stop: () => stop,
     toRef: () => toRef,
     toRefs: () => toRefs,
+    topDisplayString: () => topDisplayString,
     unRef: () => unRef,
     watch: () => watch
   });
@@ -620,7 +624,7 @@ var VueRuntimeDOM = (() => {
   function isSameVnode(n1, n2) {
     return n1.type === n2.type && n1.key === n2.key;
   }
-  function createVnode(type, props, children = null) {
+  function createVnode(type, props, children = null, patchFlag = 0) {
     let shapeFlag = isString(type) ? 1 /* ELEMENT */ : isObject(type) ? 4 /* STATEFUL_COMPONENT */ : 0;
     const vnode = {
       type,
@@ -629,7 +633,8 @@ var VueRuntimeDOM = (() => {
       el: null,
       key: props == null ? void 0 : props["key"],
       __v_isVnode: true,
-      shapeFlag
+      shapeFlag,
+      patchFlag
     };
     if (children) {
       let type2 = 0;
@@ -643,7 +648,25 @@ var VueRuntimeDOM = (() => {
       }
       vnode.shapeFlag = shapeFlag | type2;
     }
+    if (currentBlock && vnode.patchFlag > 0) {
+      currentBlock.push(vnode);
+    }
     return vnode;
+  }
+  var currentBlock = null;
+  function openBlock() {
+    currentBlock = [];
+  }
+  function createElementBlock(type, props, children, PatchFlag) {
+    return setupBlock(createVnode(type, props, children, PatchFlag));
+  }
+  function setupBlock(vnode) {
+    vnode.dynamicChildren = currentBlock;
+    currentBlock = null;
+    return vnode;
+  }
+  function topDisplayString(val) {
+    return isString(val) ? val : val == null ? "" : isObject(val) ? JSON.stringify(val) : String(val);
   }
 
   // packages/runtime-core/src/renderer.ts
@@ -839,15 +862,31 @@ var VueRuntimeDOM = (() => {
         hostSetElementText(el, "");
       }
     };
+    const patchBlockChildren = (oldN, newN) => {
+      for (let i = 0; i < newN.dynamicChildren.length; i++) {
+        patchElement(oldN.dynamicChildren[i], newN.dynamicChildren[i]);
+      }
+    };
     const patchElement = (oldN, newN) => {
       let el = newN.el = oldN.el;
       let oldProps = oldN.props || {};
       let newProps = newN.props || {};
-      patchProps(oldProps, newProps, el);
-      for (let i = 0; i < newN.children.length; i++) {
-        newN.children[i] = normalize(newN.children, i);
+      let { patchFlag } = newN;
+      if (patchFlag & 2 /* CLASS */) {
+        if (oldProps.class !== newProps.class) {
+          hostPatchProp(el, "class", null, newProps.class);
+        }
+      } else {
+        patchProps(oldProps, newProps, el);
       }
-      patchChildren(oldN, newN, el);
+      if (newN.dynamicChildren) {
+        patchBlockChildren(oldN, newN);
+      } else {
+        for (let i = 0; i < newN.children.length; i++) {
+          newN.children[i] = normalize(newN.children, i);
+        }
+        patchChildren(oldN, newN, el);
+      }
     };
     const processText = (oldN, newN, container) => {
       if (oldN === null) {
@@ -891,7 +930,7 @@ var VueRuntimeDOM = (() => {
           if (bm) {
             invokeArrayFns(bm);
           }
-          const subTree = render3.call(instance.proxy);
+          const subTree = render3.call(instance.proxy, instance.proxy);
           patch(null, subTree, container, anchor);
           if (m) {
             invokeArrayFns(m);
@@ -906,7 +945,7 @@ var VueRuntimeDOM = (() => {
           if (bu) {
             invokeArrayFns(bu);
           }
-          const subTree = render3.call(instance.proxy);
+          const subTree = render3.call(instance.proxy, instance.proxy);
           patch(instance.subTree, subTree, container, anchor);
           instance.subTree = subTree;
           if (u) {
