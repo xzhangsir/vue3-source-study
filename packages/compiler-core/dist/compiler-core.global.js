@@ -79,6 +79,89 @@ var VueCompilerCore = (() => {
     };
   }
 
+  // packages/compiler-core/src/genderate.ts
+  function genderate(ast) {
+    console.log("\u751F\u6210\u6700\u7EC8\u7684\u4EE3\u7801", ast);
+    const context = createCodeContext(ast);
+    console.log(context);
+    const { push, indent, deindent } = context;
+    getFunctionPreable(ast, context);
+    const functionName = "render";
+    const args = ["_ctx", "_cache", "$props"];
+    push(`function ${functionName}(${args.join(",")}){`);
+    indent();
+    push(`return `);
+    console.log(ast.codegenNode);
+    if (ast.codegenNode) {
+      genNode(ast.codegenNode, context);
+    } else {
+      push("null");
+    }
+    deindent();
+    push("}");
+    return context.code;
+  }
+  function getFunctionPreable(ast, context) {
+    if (ast.helpers.length > 0) {
+      context.push(`import {${ast.helpers.map((h) => `${context.helper(h)} as _${context.helper(h)}`).join(",")}} from "vue"`);
+      context.newline();
+    }
+    context.push("export ");
+  }
+  function createCodeContext(ast) {
+    const context = {
+      code: "",
+      helper(name) {
+        return `${helperMap[name]}`;
+      },
+      push(code) {
+        context.code += code;
+      },
+      indentLevel: 0,
+      indent() {
+        ++context.indentLevel;
+        context.newline();
+      },
+      deindent(whithoutNewLine = false) {
+        --context.indentLevel;
+        if (!whithoutNewLine) {
+          context.newline();
+        }
+      },
+      newline() {
+        newline(context.indentLevel);
+      }
+    };
+    function newline(n) {
+      context.push("\n" + "  ".repeat(n));
+    }
+    return context;
+  }
+  function genNode(node, context) {
+    switch (node.type) {
+      case 2 /* TEXT */:
+        genText(node, context);
+        break;
+      case 5 /* INTERPOLATION */:
+        genInterpolation(node, context);
+        break;
+      case 4 /* SIMPLE_EXPRESSION */:
+        genExpression(node, context);
+        break;
+    }
+  }
+  function genText(node, context) {
+    context.push(JSON.stringify(node.content));
+  }
+  function genInterpolation(node, context) {
+    context.push(`_${helperMap[TO_DISPLAY_STRING]}(`);
+    genNode(node.context, context);
+    context.push(")");
+  }
+  function genExpression(node, context) {
+    context.push(node.content);
+  }
+
   // packages/compiler-core/src/parse.ts
   function parse(template) {
     const context = createParserContext(template);
@@ -454,9 +537,11 @@ var VueCompilerCore = (() => {
         context.helper(CREATE_ELEMENT_BLOCK);
         ast.codegenNode.isBlock = true;
       } else {
-        ast.codegenNode = child.codegenNode;
+        ast.codegenNode = child;
       }
     } else {
+      if (children.length == 0)
+        return;
       ast.codegenNode = createVnodeCall(context, context.helper(FRAGMENT), null, ast.children);
       context.helper(OPEN_BLOCK);
       context.helper(CREATE_ELEMENT_BLOCK);
@@ -468,7 +553,7 @@ var VueCompilerCore = (() => {
   function compile(template) {
     const ast = parse(template);
     transform(ast);
-    return ast;
+    return genderate(ast);
   }
   return __toCommonJS(src_exports);
 })();
