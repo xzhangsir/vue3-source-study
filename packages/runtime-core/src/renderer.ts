@@ -558,6 +558,12 @@ export function createRenderer(renderOptions){
   }
 
   const unmount = (vnode)=>{
+    if(vnode.type === Fragment){
+      // Fragment 删除的时候 要清空儿子
+      return unmountChildren(vnode)
+    }else if(vnode.shapeFlag & ShapeFlags.COMPONENT){
+      return unmount(vnode.component.subTree)
+    }
     hostRemove(vnode.el)
   }
 
