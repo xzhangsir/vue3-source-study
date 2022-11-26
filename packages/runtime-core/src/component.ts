@@ -121,3 +121,12 @@ export function setupComponent(instance){
   }
 
 }
+
+export function renderComponent(instance){
+  let {vnode,render,props} = instance
+  if(vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT){
+    return render.call(instance.proxy,instance.proxy)
+  }else{
+    return vnode.type(props)  //函数式组件
+  }
+}

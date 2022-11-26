@@ -53,6 +53,7 @@ var VueRuntimeDOM = (() => {
     readonly: () => readonly,
     ref: () => ref,
     render: () => render,
+    renderComponent: () => renderComponent,
     setCurrentInstance: () => setCurrentInstance,
     setupComponent: () => setupComponent,
     shallowReactive: () => shallowReactive,
@@ -517,6 +518,9 @@ var VueRuntimeDOM = (() => {
     }
     instance.props = shallowReactive(props);
     instance.attrs = attrs;
+    if (instance.vnode.shapeFlag & 2 /* FUNCTIONAL_COMPONENT */) {
+      instance.props = instance.attrs;
+    }
   }
   var hasPropsChanged = (prevProps = {}, nextProps = {}) => {
     const nextKeys = Object.keys(nextProps);
@@ -643,6 +647,14 @@ var VueRuntimeDOM = (() => {
       instance.render = type.render;
     }
   }
+  function renderComponent(instance) {
+    let { vnode, render: render2, props } = instance;
+    if (vnode.shapeFlag & 4 /* STATEFUL_COMPONENT */) {
+      return render2.call(instance.proxy, instance.proxy);
+    } else {
+      return vnode.type(props);
+    }
+  }
 
   // packages/runtime-core/src/scheduler.ts
   var queue = [];
@@ -700,7 +712,7 @@ var VueRuntimeDOM = (() => {
     return n1.type === n2.type && n1.key === n2.key;
   }
   function createVnode(type, props, children = null, patchFlag = 0) {
-    let shapeFlag = isString(type) ? 1 /* ELEMENT */ : isTeleport(type) ? 64 /* TELEPORT */ : isObject(type) ? 4 /* STATEFUL_COMPONENT */ : 0;
+    let shapeFlag = isString(type) ? 1 /* ELEMENT */ : isTeleport(type) ? 64 /* TELEPORT */ : isFunction(type) ? 2 /* FUNCTIONAL_COMPONENT */ : isObject(type) ? 4 /* STATEFUL_COMPONENT */ : 0;
     const vnode = {
       type,
       props,
@@ -1005,7 +1017,7 @@ var VueRuntimeDOM = (() => {
           if (bm) {
             invokeArrayFns(bm);
           }
-          const subTree = render3.call(instance.proxy, instance.proxy);
+          const subTree = renderComponent(instance);
           patch(null, subTree, container, anchor, instance);
           if (m) {
             invokeArrayFns(m);
@@ -1020,7 +1032,7 @@ var VueRuntimeDOM = (() => {
           if (bu) {
             invokeArrayFns(bu);
           }
-          const subTree = render3.call(instance.proxy, instance.proxy);
+          const subTree = renderComponent(instance);
           patch(instance.subTree, subTree, container, anchor, instance);
           instance.subTree = subTree;
           if (u) {

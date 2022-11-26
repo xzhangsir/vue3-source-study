@@ -1,4 +1,5 @@
 import { shallowReactive } from "@vue/reactivity";
+import { ShapeFlags } from "@vue/shared";
 
 
 export function initProps(instance,rawProps){
@@ -28,6 +29,12 @@ export function initProps(instance,rawProps){
 
    instance.props = shallowReactive(props)
    instance.attrs = attrs
+  // props是组件中的  如果是函数式组件 应该用attrs作为props
+  if(instance.vnode.shapeFlag & ShapeFlags.FUNCTIONAL_COMPONENT){
+    instance.props = instance.attrs
+  }
+
+
 }
 // props 是否需要更新
 export const hasPropsChanged = (prevProps = {},nextProps = {})=>{

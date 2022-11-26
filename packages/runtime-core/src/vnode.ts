@@ -1,7 +1,7 @@
 // 一个虚拟节点 需要有 
 // type props  children
 
-import { isArray, isObject, isString, ShapeFlags } from "@vue/shared";
+import { isArray, isFunction, isObject, isString, ShapeFlags } from "@vue/shared";
 import { isTeleport } from "./components/Teleport";
 
 export const Text = Symbol("Text")
@@ -27,6 +27,8 @@ export function createVnode(type,props,children = null,patchFlag = 0){
     isString(type) ? ShapeFlags.ELEMENT : 
     // 说明是个 teleport 传送门
     isTeleport(type) ? ShapeFlags.TELEPORT :
+    // 函数式组件
+    isFunction(type) ? ShapeFlags.FUNCTIONAL_COMPONENT:
     // object 说明是组件(有状态组件)
     isObject(type) ? ShapeFlags.STATEFUL_COMPONENT : 0;
 
