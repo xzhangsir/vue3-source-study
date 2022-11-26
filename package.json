@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "node script/dev.js  compiler-core  -f global"  
+    "dev": "node script/dev.js  reactivity   -f global"
   },
   "keywords": [],
   "author": "",

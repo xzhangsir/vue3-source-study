@@ -22,6 +22,7 @@ var VueReactivity = (() => {
   __export(src_exports, {
     computed: () => computed,
     effect: () => effect,
+    effectScope: () => effectScope,
     isReactive: () => isReactive,
     isReadonly: () => isReadonly,
     isRef: () => isRef,
@@ -49,6 +50,50 @@ var VueReactivity = (() => {
   var isArray = Array.isArray;
   var extend = Object.assign;
 
+  // packages/reactivity/src/effectScope.ts
+  var activeEffectScope = null;
+  var EffectScope = class {
+    constructor(detached) {
+      this.active = true;
+      this.parent = null;
+      this.effects = [];
+      this.scopes = [];
+      if (!detached && activeEffectScope) {
+        activeEffectScope.scopes.push(this);
+      }
+    }
+    run(fn) {
+      if (this.active) {
+        try {
+          this.parent = activeEffectScope;
+          activeEffectScope = this;
+          return fn();
+        } finally {
+          activeEffectScope = this.parent;
+        }
+      }
+    }
+    stop() {
+      if (this.active) {
+        for (let i = 0; i < this.effects.length; i++) {
+          this.effects[i].stop();
+        }
+        for (let i = 0; i < this.scopes.length; i++) {
+          this.scopes[i].stop();
+        }
+        this.active = false;
+      }
+    }
+  };
+  function recordEffectScope(effect2) {
+    if (activeEffectScope && activeEffectScope.active) {
+      activeEffectScope.effects.push(effect2);
+    }
+  }
+  function effectScope(detached = false) {
+    return new EffectScope(detached);
+  }
+
   // packages/reactivity/src/effect.ts
   var activeEffect = void 0;
   var shouldTrack;
@@ -59,6 +104,7 @@ var VueReactivity = (() => {
       this.parent = null;
       this.deps = [];
       this.active = true;
+      recordEffectScope(this);
     }
     run() {
       if (!this.active) {
@@ -86,7 +132,7 @@ var VueReactivity = (() => {
     }
   };
   function effect(fn, options = {}) {
-    const _effect = new ReactiveEffect(fn, options);
+    const _effect = new ReactiveEffect(fn, options.scheduler);
     _effect.run();
     const runner = _effect.run.bind(_effect);
     runner.effect = _effect;

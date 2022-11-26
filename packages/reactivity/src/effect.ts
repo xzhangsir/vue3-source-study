@@ -1,3 +1,5 @@
+import { recordEffectScope } from "./effectScope";
+
 export let activeEffect = undefined //当前正在执行的effect是谁
 let shouldTrack // 当前这个 实例需不需要 收集依赖
 
@@ -10,7 +12,9 @@ export class ReactiveEffect{
   public active = true
   public onStop?: () => void // onStop hooks
   // scheduler 用户自定义调度器
-  constructor(public fn: any,public scheduler?: any){}
+  constructor(public fn: any,public scheduler?: any){
+    recordEffectScope(this)
+  }
   run(){
     // 如果当前的effect是非激活的状态
     // 只执行传入的函数 
@@ -70,8 +74,8 @@ effect(()=>{ //e1  parent = null activeEffect = e1
 
 
 
-export function effect(fn,options:Object = {}){
-  const _effect = new ReactiveEffect(fn,options)
+export function effect(fn,options:any = {}){
+  const _effect = new ReactiveEffect(fn,options.scheduler)
   // 默认执行一次
   _effect.run()
 
