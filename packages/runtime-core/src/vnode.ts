@@ -2,6 +2,7 @@
 // type props  children
 
 import { isArray, isObject, isString, ShapeFlags } from "@vue/shared";
+import { isTeleport } from "./components/Teleport";
 
 export const Text = Symbol("Text")
 export const Fragment = Symbol("Fragment")
@@ -24,6 +25,8 @@ export function createVnode(type,props,children = null,patchFlag = 0){
   let shapeFlag = 
     //string  说明是元素
     isString(type) ? ShapeFlags.ELEMENT : 
+    // 说明是个 teleport 传送门
+    isTeleport(type) ? ShapeFlags.TELEPORT :
     // object 说明是组件(有状态组件)
     isObject(type) ? ShapeFlags.STATEFUL_COMPONENT : 0;
 

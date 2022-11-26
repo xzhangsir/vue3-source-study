@@ -545,6 +545,14 @@ export function createRenderer(renderOptions){
           processElement(oldN,newN,container,anchor,parentComponent)
         }else if(shapeFlag & ShapeFlags.COMPONENT){
           processComponent(oldN,newN,container,anchor,parentComponent)
+        }else if(shapeFlag & ShapeFlags.TELEPORT){
+          type.process(oldN,newN,container,anchor,{
+            mountChildren,
+            patchChildren,
+            move(vnode,container){
+              hostInsert(vnode.component ? vnode.component.subTree.el : vnode.el,container)
+            }
+          })
         }
     }
   }

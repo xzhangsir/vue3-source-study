@@ -22,6 +22,7 @@ var VueRuntimeDOM = (() => {
   __export(src_exports, {
     Fragment: () => Fragment,
     Lifecycle: () => Lifecycle,
+    Teleport: () => TeleportImpl,
     Text: () => Text,
     computed: () => computed,
     createComponentInstance: () => createComponentInstance,
@@ -665,6 +666,29 @@ var VueRuntimeDOM = (() => {
     }
   }
 
+  // packages/runtime-core/src/components/Teleport.ts
+  var TeleportImpl = {
+    __isTeleport: true,
+    process(oldN, newN, container, anchor, internals) {
+      let { mountChildren, patchChildren, move } = internals;
+      if (!oldN) {
+        const target = document.querySelector(newN.props.to);
+        if (target) {
+          mountChildren(target, newN.children);
+        }
+      } else {
+        patchChildren(oldN, newN, container);
+        if (newN.props.to !== oldN.props.to) {
+          const nextTarget = document.querySelector(newN.props.to);
+          newN.children.forEach((child) => move(child, nextTarget));
+        }
+      }
+    }
+  };
+  var isTeleport = (type) => {
+    return type.__isTeleport;
+  };
+
   // packages/runtime-core/src/vnode.ts
   var Text = Symbol("Text");
   var Fragment = Symbol("Fragment");
@@ -675,7 +699,7 @@ var VueRuntimeDOM = (() => {
     return n1.type === n2.type && n1.key === n2.key;
   }
   function createVnode(type, props, children = null, patchFlag = 0) {
-    let shapeFlag = isString(type) ? 1 /* ELEMENT */ : isObject(type) ? 4 /* STATEFUL_COMPONENT */ : 0;
+    let shapeFlag = isString(type) ? 1 /* ELEMENT */ : isTeleport(type) ? 64 /* TELEPORT */ : isObject(type) ? 4 /* STATEFUL_COMPONENT */ : 0;
     const vnode = {
       type,
       props,
@@ -1051,6 +1075,14 @@ var VueRuntimeDOM = (() => {
             processElement(oldN, newN, container, anchor, parentComponent);
           } else if (shapeFlag & 6 /* COMPONENT */) {
             processComponent(oldN, newN, container, anchor, parentComponent);
+          } else if (shapeFlag & 64 /* TELEPORT */) {
+            type.process(oldN, newN, container, anchor, {
+              mountChildren,
+              patchChildren,
+              move(vnode, container2) {
+                hostInsert(vnode.component ? vnode.component.subTree.el : vnode.el, container2);
+              }
+            });
           }
       }
     };
