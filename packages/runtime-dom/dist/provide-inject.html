@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script src="../dist/runtime-dom.global.js"></script>
+</head>
+<body>
+  <div id = "app"></div>
+  <script>
+    const { createRenderer, reactive, h, render, Text, Fragment, getCurrentInstance, provide, inject } = VueRuntimeDOM
+    //  provide / inject
+    // 实现原理是 在父组件上增加了一个provide属性
+    // 当调用这个provide的时候 会向这个属性中存值
+    // 在渲染子组件的时候  子会将父的provide放到自己身上
+    // 孙的 inject 取子的 provide  子的 inject 取父的 provide 
+    const My = {
+        name: "child",
+        setup() {
+          let state = inject("VueComponent")
+          // let testDefault = inject("testDefault", 123)
+
+          let instance = getCurrentInstance()
+          // console.log(instance);
+          // console.log(instance.parent);
+          return {
+            state,
+            // testDefault
+          }
+        },
+        render() {
+          return h('h1', this.state.name)
+          // return h('h1',"999")
+
+        }
+      }
+
+      const VueComponent = {
+        name: "parent",
+        setup() {
+          const state = reactive({ name: "zx" })
+          provide("VueComponent", state)
+          setTimeout(() => {
+            state.name = "xm"
+          }, 1000);
+        },
+        render() {
+          return h(My)
+        }
+      }
+
+      render(h(VueComponent), app)
+  </script>
+</body>
+</html>

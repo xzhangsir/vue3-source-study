@@ -12,8 +12,11 @@ export const getCurrentInstance = ()=>{
    return currentInstance
 }
 
-export function createComponentInstance(vnode){
+export function createComponentInstance(vnode,parent){
   const instance = {
+    //所有组件中inject用的都是父级的provides
+      provides:parent ? parent.provides : Object.create(null), 
+      parent,
       data:null,
       vnode, // //组件的虚拟节点
       subTree:null,// 渲染的节点
