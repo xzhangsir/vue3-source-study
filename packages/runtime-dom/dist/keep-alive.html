@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh_CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script src="../dist/runtime-dom.global.js"></script>
+  <!-- <script src = "./reactivity.global.js"></script> -->
+</head>
+
+<body>
+  <div id="app"></div>
+
+  <script>
+
+    const { ref, createRenderer, reactive, h, render, Text, Fragment, getCurrentInstance, provide, inject, Teleport, defineAsyncComponent,
+      KeepAlive, onMounted } = VueRuntimeDOM
+
+
+    const My1 = {
+      setup() {
+        onMounted(() => {
+          console.log("my1 mounted")
+        })
+      },
+      render: () => h('h1', "my1")
+    }
+    const My2 = {
+      setup() {
+        onMounted(() => {
+          console.log("my2 mounted")
+        })
+      },
+      render: () => h('h1', "my2")
+    }
+
+    render(h(KeepAlive, null, {
+      default: () => h(My1)
+    }), app)
+
+    setTimeout(() => {
+      render(h(KeepAlive, null, {
+        default: () => h(My2)
+      }), app)
+    }, 1000)
+
+    setTimeout(()=>{
+        render(h(KeepAlive,null,{
+          default:()=>h(My1)
+        }),app)
+    },2000)
+
+
+
+  </script>
+
+
+</body>
+
+</html>

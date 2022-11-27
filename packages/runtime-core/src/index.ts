@@ -9,3 +9,5 @@ export * from "./apiInject"
 export {TeleportImpl as Teleport} from "./components/Teleport"
 
 export {defineAsyncComponent} from "./components/defineAsyncComponent"
+
+export {KeepAliveImpl as KeepAlive} from "./components/KeepAlive"

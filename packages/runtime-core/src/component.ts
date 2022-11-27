@@ -14,6 +14,7 @@ export const getCurrentInstance = ()=>{
 
 export function createComponentInstance(vnode,parent){
   const instance = {
+      ctx:{},  // 实例的上下文(KeepAlive用)
     //所有组件中inject用的都是父级的provides
       provides:parent ? parent.provides : Object.create(null), 
       parent,

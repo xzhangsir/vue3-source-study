@@ -3,6 +3,7 @@ import { invokeArrayFns,isNumber, isString, PatchFlags, ShapeFlags } from "@vue/
 import { ReactiveEffect } from "packages/reactivity/src/effect"
 import { createComponentInstance, renderComponent, setupComponent } from "./component"
 import { hasPropsChanged, updateProps } from "./componentProps"
+import { isKeepAlive } from "./components/KeepAlive"
 import { queueJob } from "./scheduler"
 import { createVnode, Fragment, isSameVnode,Text } from "./vnode"
 
@@ -38,9 +39,9 @@ export function createRenderer(renderOptions){
     }
     return children[i]
   }
-  const unmountChildren = (children)=>{
+  const unmountChildren = (children,parentComponent)=>{
     for(let i = 0 ; i < children.length ; i++){
-      unmount(children[i])
+      unmount(children[i],parentComponent)
     }
   }
 
@@ -93,7 +94,7 @@ export function createRenderer(renderOptions){
     }
   }
 
-  const patchKeyChildren = (c1,c2,el)=>{
+  const patchKeyChildren = (c1,c2,el,parentComponent)=>{
     // 比较两个儿子的差异
     let i = 0;
     let e1 = c1.length - 1;
@@ -157,7 +158,7 @@ export function createRenderer(renderOptions){
         // i 要比 e2 大 说明有卸载的
         // i 和   e1 之间的是需要卸载的部分
         while(i <= e1){
-          unmount(c1[i])
+          unmount(c1[i],parentComponent)
           i++
         }
     }
@@ -189,7 +190,7 @@ export function createRenderer(renderOptions){
       const oldChild = c1[i] //老的孩子
       let newIndex = keyToNewIndexMap.get(oldChild.key) //新孩子的索引
       if(newIndex === undefined){
-        unmount(oldChild)
+        unmount(oldChild,parentComponent)
       }else{
         // 新的位置  对应的老的位置
         newIndexToOldIndexArr[newIndex - s2] = i + 1;
@@ -332,7 +333,7 @@ export function createRenderer(renderOptions){
       // 现在变 文本
       if(prevShapeFlag & ShapeFlags.ARRAY_CHILDREN){
         // 如果原来的是数组  先删除所有的子节点
-        unmountChildren(c1)
+        unmountChildren(c1,parentComponent)
       }
       if(c1 !== c2){
         hostSetElementText(el,c2)
@@ -341,7 +342,7 @@ export function createRenderer(renderOptions){
       // 现在变数组
       if(prevShapeFlag & ShapeFlags.ARRAY_CHILDREN){
         // diff算法 之前是数组
-        patchKeyChildren(c1,c2,el)  //全量比对
+        patchKeyChildren(c1,c2,el,parentComponent)  //全量比对
 
       }else if(prevShapeFlag & ShapeFlags.TEXT_CHILDREN){
         // 之前是文本
@@ -432,6 +433,16 @@ export function createRenderer(renderOptions){
   const mountComponent = (vnode,container,anchor,parentComponent)=>{
     // 1 ) 要创造一个组件的实例
     let instance =  vnode.component = createComponentInstance(vnode,parentComponent)
+
+    if(isKeepAlive(vnode)){
+      (instance.ctx as any).renderer = {
+        createElement : hostCreateElement,
+        move(vnode,container){
+          hostInsert(vnode.component.subTree.el,container)
+        }
+      }
+    }
+
     // 2 ) 给实例上赋值
     setupComponent(instance)
     // 3 ） 创造一个effect
@@ -443,6 +454,7 @@ export function createRenderer(renderOptions){
     instance.next = null
     instance.vnode = next //实例上最新的虚拟节点
     updateProps(instance.props,next.props)
+    Object.assign(instance.slots,next.children)//更新插槽
   }
 
 
@@ -460,13 +472,14 @@ export function createRenderer(renderOptions){
          const subTree = renderComponent(instance)
         // 创造了subtree的真实节点 并插入了
         patch(null,subTree,container,anchor,instance)
+       
+        instance.subTree = subTree
+        instance.isMounted = true
+
         if(m){
           invokeArrayFns(m)
         }
 
-        instance.subTree = subTree
-
-        instance.isMounted = true
       }else{
         // 组件内部更新
         let {next,bu,u} = instance
@@ -497,11 +510,12 @@ export function createRenderer(renderOptions){
     const {props:prevProps,children:prevChildren} = n1
     const {props:nextProps,children:nextChildren} = n2
 
-    if(prevProps === nextProps) return false
-
+    
     if(prevChildren || nextChildren){
       return true
     }
+
+    if(prevProps === nextProps) return false
 
     return hasPropsChanged(prevProps,nextProps)
   }
@@ -518,7 +532,12 @@ export function createRenderer(renderOptions){
 
   const processComponent = (oldN,newN,container,anchor,parentComponent)=>{
     if(oldN  == null){
-      mountComponent(newN,container,anchor,parentComponent)
+      // mountComponent(newN,container,anchor,parentComponent)
+      if(newN.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE){
+        parentComponent.ctx.active(newN,container,anchor)
+      }else{
+       mountComponent(newN,container,anchor,parentComponent)
+      }
     }else{
       // 组件更新靠的是props
       updateComponent(oldN,newN)
@@ -529,7 +548,7 @@ export function createRenderer(renderOptions){
     if(oldN === newN) return null
     // 新老节点 完全不一致  直接删除老的 再创建新的
     if(oldN && !isSameVnode(oldN,newN)){
-      unmount(oldN)
+      unmount(oldN,parentComponent)
       oldN = null
     }
 
@@ -559,12 +578,14 @@ export function createRenderer(renderOptions){
     }
   }
 
-  const unmount = (vnode)=>{
+  const unmount = (vnode,parentComponent)=>{
     if(vnode.type === Fragment){
       // Fragment 删除的时候 要清空儿子
-      return unmountChildren(vnode)
+      return unmountChildren(vnode,parentComponent)
+    }else if(vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE){
+      return parentComponent.ctx.deactivate(vnode)
     }else if(vnode.shapeFlag & ShapeFlags.COMPONENT){
-      return unmount(vnode.component.subTree)
+      return unmount(vnode.component.subTree,parentComponent)
     }
     hostRemove(vnode.el)
   }
@@ -575,7 +596,7 @@ export function createRenderer(renderOptions){
       // 卸载
       //如果vnode是空的 就清空container里面的内容 
       if(container._vnode){
-        unmount(container._vnode)
+        unmount(container._vnode,null)
       }
     }else{
        // 挂载

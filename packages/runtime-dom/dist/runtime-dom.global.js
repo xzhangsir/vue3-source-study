@@ -21,6 +21,7 @@ var VueRuntimeDOM = (() => {
   var src_exports = {};
   __export(src_exports, {
     Fragment: () => Fragment,
+    KeepAlive: () => KeepAliveImpl,
     Lifecycle: () => Lifecycle,
     Teleport: () => TeleportImpl,
     Text: () => Text,
@@ -556,6 +557,7 @@ var VueRuntimeDOM = (() => {
   };
   function createComponentInstance(vnode, parent) {
     const instance = {
+      ctx: {},
       provides: parent ? parent.provides : /* @__PURE__ */ Object.create(null),
       parent,
       data: null,
@@ -656,28 +658,31 @@ var VueRuntimeDOM = (() => {
     }
   }
 
-  // packages/runtime-core/src/scheduler.ts
-  var queue = [];
-  var isFlushing = false;
-  var resolvePromise = Promise.resolve();
-  function queueJob(job) {
-    if (!queue.includes(job)) {
-      queue.push(job);
-    }
-    if (!isFlushing) {
-      isFlushing = true;
-      resolvePromise.then(() => {
-        isFlushing = false;
-        let copy = queue.slice(0);
-        queue.length = 0;
-        for (let i = 0; i < copy.length; i++) {
-          let job2 = copy[i];
-          job2();
-        }
-        copy.length = 0;
-      });
-    }
+  // packages/runtime-core/src/apiLifecycle.ts
+  var Lifecycle = /* @__PURE__ */ ((Lifecycle2) => {
+    Lifecycle2["BEFORE_MOUNT"] = "bm";
+    Lifecycle2["MOUNTED"] = "m";
+    Lifecycle2["BEFORE_UPDATE"] = "bu";
+    Lifecycle2["UPDATED"] = "u";
+    return Lifecycle2;
+  })(Lifecycle || {});
+  function createHook(type) {
+    return (hook, target = currentInstance) => {
+      if (target) {
+        const hooks = target[type] || (target[type] = []);
+        const wrappedHook = () => {
+          setCurrentInstance(target);
+          hook();
+          setCurrentInstance(null);
+        };
+        hooks.push(wrappedHook);
+      }
+    };
   }
+  var onBeforeMount = createHook("bm" /* BEFORE_MOUNT */);
+  var onMounted = createHook("m" /* MOUNTED */);
+  var onBeforeUpdate = createHook("bu" /* BEFORE_UPDATE */);
+  var onUpdated = createHook("u" /* UPDATED */);
 
   // packages/runtime-core/src/components/Teleport.ts
   var TeleportImpl = {
@@ -756,6 +761,108 @@ var VueRuntimeDOM = (() => {
     return isString(val) ? val : val == null ? "" : isObject(val) ? JSON.stringify(val) : String(val);
   }
 
+  // packages/runtime-core/src/components/KeepAlive.ts
+  function resetShapeFlag(vnode) {
+    let shapeFlag = vnode.shapeFlag;
+    if (shapeFlag & 256 /* COMPONENT_SHOULD_KEEP_ALIVE */) {
+      shapeFlag -= 256 /* COMPONENT_SHOULD_KEEP_ALIVE */;
+    }
+    if (shapeFlag & 512 /* COMPONENT_KEPT_ALIVE */) {
+      shapeFlag -= 512 /* COMPONENT_KEPT_ALIVE */;
+    }
+    vnode.shapeFlag = shapeFlag;
+  }
+  var KeepAliveImpl = {
+    __isKeepAlive: true,
+    props: {
+      include: {},
+      exclude: {},
+      max: {}
+    },
+    setup(props, { slots }) {
+      const Keys = /* @__PURE__ */ new Set();
+      const cache = /* @__PURE__ */ new Map();
+      const instance = getCurrentInstance();
+      const { createElement, move } = instance.ctx.renderer;
+      const storageContainer = createElement("div");
+      instance.ctx.deactivate = function(vnode) {
+        move(vnode, storageContainer);
+      };
+      instance.ctx.active = function(vnode, container, anchor) {
+        move(vnode, container, anchor);
+      };
+      let pendingCacheKey = null;
+      function cacheSubTree() {
+        if (pendingCacheKey) {
+          cache.set(pendingCacheKey, instance.subTree);
+        }
+      }
+      onMounted(cacheSubTree);
+      onUpdated(cacheSubTree);
+      const { include, exclude, max } = props;
+      let currentVNode = null;
+      function pruneCacheEntry(key) {
+        resetShapeFlag(currentVNode);
+        cache.delete(key);
+        Keys.delete(key);
+      }
+      return () => {
+        let vnode = slots.default();
+        if (!isVnode(vnode) || !(vnode.shapeFlag & 4 /* STATEFUL_COMPONENT */)) {
+          return vnode;
+        }
+        const comp = vnode.type;
+        const key = vnode.key == null ? comp : vnode.key;
+        let name = comp.name;
+        if (name && (include && !include.split(",").includes(name)) || exclude && exclude.split(",").includes(name)) {
+          return vnode;
+        }
+        let cacheVnode = cache.get(key);
+        if (cacheVnode) {
+          vnode.component = cacheVnode.component;
+          vnode.shapeFlag |= 512 /* COMPONENT_KEPT_ALIVE */;
+          Keys.delete(key);
+          Keys.add(key);
+        } else {
+          Keys.add(key);
+          pendingCacheKey = key;
+          if (max && max < Keys.size) {
+            pruneCacheEntry(Keys.values().next().value);
+          }
+        }
+        vnode.shapeFlag |= 256 /* COMPONENT_SHOULD_KEEP_ALIVE */;
+        currentVNode = vnode;
+        return vnode;
+      };
+    }
+  };
+  var isKeepAlive = (vnode) => {
+    return vnode.type.__isKeepAlive;
+  };
+
+  // packages/runtime-core/src/scheduler.ts
+  var queue = [];
+  var isFlushing = false;
+  var resolvePromise = Promise.resolve();
+  function queueJob(job) {
+    if (!queue.includes(job)) {
+      queue.push(job);
+    }
+    if (!isFlushing) {
+      isFlushing = true;
+      resolvePromise.then(() => {
+        isFlushing = false;
+        let copy = queue.slice(0);
+        queue.length = 0;
+        for (let i = 0; i < copy.length; i++) {
+          let job2 = copy[i];
+          job2();
+        }
+        copy.length = 0;
+      });
+    }
+  }
+
   // packages/runtime-core/src/renderer.ts
   function createRenderer(renderOptions2) {
     let {
@@ -777,9 +884,9 @@ var VueRuntimeDOM = (() => {
       }
       return children[i];
     };
-    const unmountChildren = (children) => {
+    const unmountChildren = (children, parentComponent) => {
       for (let i = 0; i < children.length; i++) {
-        unmount(children[i]);
+        unmount(children[i], parentComponent);
       }
     };
     const mountChildren = (el, children, parentComponent) => {
@@ -813,7 +920,7 @@ var VueRuntimeDOM = (() => {
         }
       }
     };
-    const patchKeyChildren = (c1, c2, el) => {
+    const patchKeyChildren = (c1, c2, el, parentComponent) => {
       let i = 0;
       let e1 = c1.length - 1;
       let e2 = c2.length - 1;
@@ -847,7 +954,7 @@ var VueRuntimeDOM = (() => {
         }
       } else if (i > e2) {
         while (i <= e1) {
-          unmount(c1[i]);
+          unmount(c1[i], parentComponent);
           i++;
         }
       }
@@ -863,7 +970,7 @@ var VueRuntimeDOM = (() => {
         const oldChild = c1[i2];
         let newIndex = keyToNewIndexMap.get(oldChild.key);
         if (newIndex === void 0) {
-          unmount(oldChild);
+          unmount(oldChild, parentComponent);
         } else {
           newIndexToOldIndexArr[newIndex - s2] = i2 + 1;
           patch(oldChild, c2[newIndex], el);
@@ -933,14 +1040,14 @@ var VueRuntimeDOM = (() => {
       const activeShapeFlag = newN.shapeFlag;
       if (activeShapeFlag & 8 /* TEXT_CHILDREN */) {
         if (prevShapeFlag & 16 /* ARRAY_CHILDREN */) {
-          unmountChildren(c1);
+          unmountChildren(c1, parentComponent);
         }
         if (c1 !== c2) {
           hostSetElementText(el, c2);
         }
       } else if (activeShapeFlag & 16 /* ARRAY_CHILDREN */) {
         if (prevShapeFlag & 16 /* ARRAY_CHILDREN */) {
-          patchKeyChildren(c1, c2, el);
+          patchKeyChildren(c1, c2, el, parentComponent);
         } else if (prevShapeFlag & 8 /* TEXT_CHILDREN */) {
           hostSetElementText(el, "");
           mountChildren(el, c2, parentComponent);
@@ -1001,6 +1108,14 @@ var VueRuntimeDOM = (() => {
     };
     const mountComponent = (vnode, container, anchor, parentComponent) => {
       let instance = vnode.component = createComponentInstance(vnode, parentComponent);
+      if (isKeepAlive(vnode)) {
+        instance.ctx.renderer = {
+          createElement: hostCreateElement,
+          move(vnode2, container2) {
+            hostInsert(vnode2.component.subTree.el, container2);
+          }
+        };
+      }
       setupComponent(instance);
       setupRenderEffect(instance, container, anchor);
     };
@@ -1008,6 +1123,7 @@ var VueRuntimeDOM = (() => {
       instance.next = null;
       instance.vnode = next;
       updateProps(instance.props, next.props);
+      Object.assign(instance.slots, next.children);
     };
     const setupRenderEffect = (instance, container, anchor) => {
       const { render: render3 } = instance;
@@ -1019,11 +1135,11 @@ var VueRuntimeDOM = (() => {
           }
           const subTree = renderComponent(instance);
           patch(null, subTree, container, anchor, instance);
+          instance.subTree = subTree;
+          instance.isMounted = true;
           if (m) {
             invokeArrayFns(m);
           }
-          instance.subTree = subTree;
-          instance.isMounted = true;
         } else {
           let { next, bu, u } = instance;
           if (next) {
@@ -1047,11 +1163,11 @@ var VueRuntimeDOM = (() => {
     const shouldUpdateComponent = (n1, n2) => {
       const { props: prevProps, children: prevChildren } = n1;
       const { props: nextProps, children: nextChildren } = n2;
-      if (prevProps === nextProps)
-        return false;
       if (prevChildren || nextChildren) {
         return true;
       }
+      if (prevProps === nextProps)
+        return false;
       return hasPropsChanged(prevProps, nextProps);
     };
     const updateComponent = (n1, n2) => {
@@ -1063,7 +1179,11 @@ var VueRuntimeDOM = (() => {
     };
     const processComponent = (oldN, newN, container, anchor, parentComponent) => {
       if (oldN == null) {
-        mountComponent(newN, container, anchor, parentComponent);
+        if (newN.shapeFlag & 512 /* COMPONENT_KEPT_ALIVE */) {
+          parentComponent.ctx.active(newN, container, anchor);
+        } else {
+          mountComponent(newN, container, anchor, parentComponent);
+        }
       } else {
         updateComponent(oldN, newN);
       }
@@ -1072,7 +1192,7 @@ var VueRuntimeDOM = (() => {
       if (oldN === newN)
         return null;
       if (oldN && !isSameVnode(oldN, newN)) {
-        unmount(oldN);
+        unmount(oldN, parentComponent);
         oldN = null;
       }
       const { type, shapeFlag } = newN;
@@ -1099,18 +1219,20 @@ var VueRuntimeDOM = (() => {
           }
       }
     };
-    const unmount = (vnode) => {
+    const unmount = (vnode, parentComponent) => {
       if (vnode.type === Fragment) {
-        return unmountChildren(vnode);
+        return unmountChildren(vnode, parentComponent);
+      } else if (vnode.shapeFlag & 256 /* COMPONENT_SHOULD_KEEP_ALIVE */) {
+        return parentComponent.ctx.deactivate(vnode);
       } else if (vnode.shapeFlag & 6 /* COMPONENT */) {
-        return unmount(vnode.component.subTree);
+        return unmount(vnode.component.subTree, parentComponent);
       }
       hostRemove(vnode.el);
     };
     const render2 = (vnode, container) => {
       if (vnode == null) {
         if (container._vnode) {
-          unmount(container._vnode);
+          unmount(container._vnode, null);
         }
       } else {
         patch(container._vnode || null, vnode, container);
@@ -1143,32 +1265,6 @@ var VueRuntimeDOM = (() => {
       return createVnode(type, propsChildren, children);
     }
   }
-
-  // packages/runtime-core/src/apiLifecycle.ts
-  var Lifecycle = /* @__PURE__ */ ((Lifecycle2) => {
-    Lifecycle2["BEFORE_MOUNT"] = "bm";
-    Lifecycle2["MOUNTED"] = "m";
-    Lifecycle2["BEFORE_UPDATE"] = "bu";
-    Lifecycle2["UPDATED"] = "u";
-    return Lifecycle2;
-  })(Lifecycle || {});
-  function createHook(type) {
-    return (hook, target = currentInstance) => {
-      if (target) {
-        const hooks = target[type] || (target[type] = []);
-        const wrappedHook = () => {
-          setCurrentInstance(target);
-          hook();
-          setCurrentInstance(null);
-        };
-        hooks.push(wrappedHook);
-      }
-    };
-  }
-  var onBeforeMount = createHook("bm" /* BEFORE_MOUNT */);
-  var onMounted = createHook("m" /* MOUNTED */);
-  var onBeforeUpdate = createHook("bu" /* BEFORE_UPDATE */);
-  var onUpdated = createHook("u" /* UPDATED */);
 
   // packages/runtime-core/src/apiInject.ts
   function provide(key, val) {
