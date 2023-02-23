@@ -1,4 +1,5 @@
 monorepo 管理项目 （pnpm 默认支持）
+npm install pnpm -g
 pnpm init
 新建文件 pnpm-workspace.yaml
 新建文件夹 packages  
@@ -52,10 +53,18 @@ pnpm tsc --init   // typescript 配置文件生成 tsconfig.json
 // 指定打包的模块 和 打包的格式
 "dev": "node script/dev.js reactivity -f global"
 
-## Vue 中为了解耦，将逻辑分成了两个模块
-
-- 运行时（runtime-core） 核心（不依赖平台 不论是 浏览器 小程序 APP canvas） 主要靠 虚拟 dom
-- 针对不同平台的运行时(runtime-dom) Vue 就是针对浏览器平台的
-- 渲染器 createRenderer
+compiler-core 模板解析核心，与具体环境无关，主要生成 AST，并根据 AST 生成 render() 函数
+compiler-dom 浏览器环境中的模板解析逻辑，如处理 HTML 转义、处理 v-model 等指令
+compiler-sfc 负责解析 Vue 单文件组件
+compiler-ssr 服务端渲染环境中的模板解析逻辑
+reactivity 响应式数据相关逻辑
+runtime-core 与平台无关的运行时核心
+runtime-dom 浏览器环境中的运行时核心
+runtime-test 用于自动化测试的相关配套
+server-renderer 用于 SSR 服务端渲染的逻辑
+shared 一些各个包之间共享的公共工具
+size-check 一个用于测试 tree shaking 后代码大小的示例库
+template-explorer 用于检查模板编译后的输出，主要用于开发调试
+vue Vue3 的主要入口，包含不同版本的包
 
 https://vue-next-template-explorer.netlify.app/
